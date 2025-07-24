@@ -23,24 +23,24 @@ DEL = rm -f
 ########################################################################
 # Paths
 
-ifeq ($(STLHOME),)
+ifeq ($(SPLHOME),)
  PWD       := $(abspath $(shell pwd))
 #  PWD       = .
- STLHOME   := $(PWD)/..
-#  STLHOME := $(abspath $(shell pwd))
- export STLHOME
+ SPLHOME   := $(PWD)/..
+#  SPLHOME := $(abspath $(shell pwd))
+ export SPLHOME
 endif
-SRCDIR    := $(STLHOME)/src
-BINDIR    := $(STLHOME)/bin
-RUNDIR    := $(STLHOME)/test
+SRCDIR    := $(SPLHOME)/src
+BINDIR    := $(SPLHOME)/bin
+RUNDIR    := $(SPLHOME)/test
 
-LIBDIR    := $(STLHOME)/lib
+LIBDIR    := $(SPLHOME)/lib
 
 
-vpath %.f90 $(SRCDIR)
+vpath %.f90 $(SRCDIR) $(SPLHOME)/test
 vpath %.o   $(BINDIR)
 
-VPATH := $(SRCDIR) $(BINDIR) $(LIBDIR)
+VPATH := $(SRCDIR) $(SRCDIR)/test $(BINDIR) $(LIBDIR)
 #INCL_DIR := -I$(SRCDIR)/common  -I$(SRCDIR)/stl -I$(SRCDIR)/util -I$(SRCDIR)/vladsf 
 INCL_DIR := -I$(BINDIR)  -I$(LIBDIR)
 
@@ -136,11 +136,16 @@ INCL =
 OBJDIR = obj
 
 #--------------------------------------------
-FILES_STNR7ISOH5 =  test_loaddata.f90
-TEMP := $(patsubst %.f90,%.o, $(FILES_STNR7ISOH5))
-OBJSTNR7ISOH5 :=  $(TEMP:.f=.o)
-PROGSTNR7ISOH5 = xtest_loaddata.exe 
+FILES_loaddata =  test_loaddata.f90
+TEMP := $(patsubst %.f90,%.o, $(FILES_loaddata))
+OBJloaddata :=  $(TEMP:.f=.o)
+PROGloaddata = xtest_loaddata.exe 
 
+#--------------------------------------------
+FILES_ryabenky_spline =  ryabenky_spline.f90 test_ryabenky_nonuniform.f90
+TEMP := $(patsubst %.f90,%.o, $(FILES_ryabenky_spline))
+OBJryabenky_spline :=  $(TEMP:.f=.o)
+PROGryabenky_spline = xtest_ryabenky_spline.exe 
 
 
 
@@ -165,10 +170,16 @@ PROGSTNR7ISOH5 = xtest_loaddata.exe
 all: spline
 # 	@echo $(LIBS)
 
-spline: $(OBJSTNR7ISOH5)  ## compile spline 
-	$(FC) $(LDFLAGS) $(PROGSTNR7ISOH5) $(OBJSTNR7ISOH5) $(LIBS)
-	$(MV) $(PROGSTNR7ISOH5)  $(RUNDIR)     
-	@ls -l $(RUNDIR)/$(PROGSTNR7ISOH5)
+spline: $(OBJryabenky_spline)  ## compile spline lib and test
+	$(FC) $(LDFLAGS) $(PROGryabenky_spline) $(OBJryabenky_spline) $(LIBS)
+	$(MV) $(PROGryabenky_spline)  $(RUNDIR)     
+	@ls -l $(RUNDIR)/$(PROGryabenky_spline)
+
+
+load: $(OBJloaddata)  ## load dump data 
+	$(FC) $(LDFLAGS) $(PROGloaddata) $(OBJloaddata) $(LIBS)
+	$(MV) $(PROGloaddata)  $(RUNDIR)     
+	@ls -l $(RUNDIR)/$(PROGloaddata)
 
 
 help: ## Show this dynamic help
@@ -191,11 +202,11 @@ help: ## Show this dynamic help
 
 clean:  ## rm all temporry files
 	$(DEL) $(BINDIR)/*.o 
-	$(DEL) $(SRCDIR)/*.mod 
+	$(DEL) $(SRCDIR)/*.mod $(SRCDIR)/*.o
 	find $(BINDIR)/  -maxdepth 1 \( -not -type l -name "*.mod" \)  -print0 | xargs -0  -I {} rm {}
 
 cleandata:  ## rm ../run/strad/nohup.out ../run/strad/core* ../run/strad/fort.*
 	$(DEL) $(RUNDIR)/*.dump
 
 cleanall:  clean  ## rm all temporry files and executable files
-	$(DEL) $(RUNDIR)/$(PROGSTNR7ISOH5)
+	$(DEL) $(RUNDIR)/$(PROGloaddata) $(RUNDIR)/$(PROGryabenky_spline)
