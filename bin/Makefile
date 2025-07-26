@@ -136,6 +136,12 @@ INCL =
 OBJDIR = obj
 
 #--------------------------------------------
+FILES_ay3d =   load_data.f90 ryabenkiy.f90 FuncInterp.f90 main.f90
+TEMP := $(patsubst %.f90,%.o, $(FILES_ay3d))
+OBJ_ay3d :=  $(TEMP:.f=.o)
+PROG_ay3d = xtest_ay3d.exe 
+
+#--------------------------------------------
 FILES_loaddata =  test_loaddata.f90
 TEMP := $(patsubst %.f90,%.o, $(FILES_loaddata))
 OBJloaddata :=  $(TEMP:.f=.o)
@@ -167,8 +173,16 @@ PROGryabenky_spline = xtest_ryabenky_spline.exe
 
 .PHONY:
 
-all: spline
+all: ay3d
 # 	@echo $(LIBS)
+
+
+ay3d: $(OBJ_ay3d)  ## compile spline by AV Yudin for 3d
+	$(FC) $(LDFLAGS) $(PROG_ay3d) $(OBJ_ay3d) $(LIBS)
+	$(MV) $(PROG_ay3d)  $(RUNDIR)     
+	@ls -l $(RUNDIR)/$(PROG_ay3d)
+
+
 
 spline: $(OBJryabenky_spline)  ## compile spline lib and test
 	$(FC) $(LDFLAGS) $(PROGryabenky_spline) $(OBJryabenky_spline) $(LIBS)
@@ -209,4 +223,4 @@ cleandata:  ## rm ../run/strad/nohup.out ../run/strad/core* ../run/strad/fort.*
 	$(DEL) $(RUNDIR)/*.dump
 
 cleanall:  clean  ## rm all temporry files and executable files
-	$(DEL) $(RUNDIR)/$(PROGloaddata) $(RUNDIR)/$(PROGryabenky_spline)
+	$(DEL) $(RUNDIR)/$(PROGloaddata) $(RUNDIR)/$(PROGryabenky_spline)  $(RUNDIR)/$(PROG_ay3d)
