@@ -1,46 +1,48 @@
 MODULE RYABMOD
-    use datas
 
-    ! implicit none
+    implicit none
 
-    public :: FUNCINTERP
+    public :: rspline3d
 
-   INTEGER, PARAMETER :: NDIM=3 ! dimension of the tables
-   REAL(8) X(-1:2,NDIM)
-   ! REAL(8) F(-1:2,-1:2) ! two-dimensional
-   REAL(8) F(-1:2,-1:2,-1:2)
+    INTEGER, PARAMETER :: p_Ndim_3d = 3 ! dimension of the tables
+    REAL(8) V_3d(-1:2,p_Ndim_3d)
+    REAL(8) f_3d(-1:2,-1:2,-1:2)
 
     !====================================================
     !====================================================
 
    contains
 
-    real(8) function FUNCINTERP(point) result(z)
+    real(8) function rspline3d(n_x, n_y, n_z, x_tab, y_tab, z_tab, funcTab, point) result(res)
         ! use ryabmod
         implicit none
-        real(8), intent(in) :: point(NDIM)
-        integer, save :: n_cur(NDIM)
+        real(8), dimension(:), intent(in) :: x_tab, y_tab, z_tab
+        real(8), dimension(:,:,:) :: funcTab
+        integer, intent(in)  :: n_x, n_y, n_z
+
+        real(8), intent(in) :: point(p_Ndim_3d)
+        integer, save :: n_cur(p_Ndim_3d)
         logical :: reload,first_run=.true.
 
         !------/checking if current position is not out of the table's ranges/------
 
-        if(point(1).lt.TpTab(2).or.point(1).gt.TpTab(n_tp-1))then
+        if(point(1).lt.x_tab(2).or.point(1).gt.x_tab(n_x-1))then
             print*,'variables are out of range'
-            print*,'T',TpTab(2),point(1),TpTab(n_tp-1)
+            print*,'X',x_tab(2),point(1),x_tab(n_x-1)
             read*
             stop
         end if
 
-        if(point(2).lt.RhoTab(2).or.point(2).gt.RhoTab(n_rho-1))then
+        if(point(2).lt.y_tab(2).or.point(2).gt.y_tab(n_y-1))then
             print*,'variables are out of range'
-            print*,'Rho',RhoTab(2),point(2),RhoTab(n_rho-1)
+            print*,'Y',y_tab(2),point(2),y_tab(n_y-1)
             read*
             stop
         end if
 
-        if(point(3).lt.lnTimeTab(2).or.point(3).gt.lnTimeTab(n_times-1))then
+        if(point(3).lt.z_tab(2).or.point(3).gt.z_tab(n_z-1))then
             print*,'variables are out of range'
-            print*,'Rho',lnTimeTab(2),point(3),lnTimeTab(n_times-1)
+            print*,'res',z_tab(2),point(3),z_tab(n_z-1)
             read*
             stop
         end if
@@ -54,58 +56,58 @@ MODULE RYABMOD
             reload=.true.
         end if
 
-        if(reload.or.point(1).lt.TpTab(n_cur(1)).or.point(1).gt.TpTab(n_cur(1)+1))then
+        if(reload.or.point(1).lt.x_tab(n_cur(1)).or.point(1).gt.x_tab(n_cur(1)+1))then
             reload=.true.
-            n_cur(1)=minloc(point(1)-TpTab,mask=point(1)-TpTab.ge.0.d0,dim=1)
+            n_cur(1)=minloc(point(1)-x_tab,mask=point(1)-x_tab.ge.0.d0,dim=1)
         end if
 
-        if(reload.or.point(2).lt.RhoTab(n_cur(2)).or.point(2).gt.RhoTab(n_cur(2)+1))then
+        if(reload.or.point(2).lt.y_tab(n_cur(2)).or.point(2).gt.y_tab(n_cur(2)+1))then
             reload=.true.
-            n_cur(2)=minloc(point(2)-RhoTab,mask=point(2)-RhoTab.ge.0.d0,dim=1)
+            n_cur(2)=minloc(point(2)-y_tab,mask=point(2)-y_tab.ge.0.d0,dim=1)
         end if
 
-        if(reload.or.point(3).lt.lnTimeTab(n_cur(3)).or.point(3).gt.lnTimeTab(n_cur(3)+1))then
+        if(reload.or.point(3).lt.z_tab(n_cur(3)).or.point(3).gt.z_tab(n_cur(3)+1))then
             reload=.true.
-            n_cur(3)=minloc(point(3)-lnTimeTab,mask=point(3)-lnTimeTab.ge.0.d0,dim=1)
+            n_cur(3)=minloc(point(3)-z_tab,mask=point(3)-z_tab.ge.0.d0,dim=1)
         end if
 
         if(reload)then
-            X(:,1)=TpTab(n_cur(1)-1:n_cur(1)+2)
-            X(:,2)=RhoTab(n_cur(2)-1:n_cur(2)+2)
-            X(:,3)=lnTimeTab(n_cur(3)-1:n_cur(3)+2)
-            F=arr_dump(n_cur(1)-1:n_cur(1)+2,n_cur(2)-1:n_cur(2)+2,n_cur(3)-1:n_cur(3)+2)
+            V_3d(:,1) = x_tab(n_cur(1)-1:n_cur(1)+2)
+            V_3d(:,2) = y_tab(n_cur(2)-1:n_cur(2)+2)
+            V_3d(:,3) = z_tab(n_cur(3)-1:n_cur(3)+2)
+            f_3d = funcTab(n_cur(1)-1:n_cur(1)+2,n_cur(2)-1:n_cur(2)+2,n_cur(3)-1:n_cur(3)+2)
         end if
 
-        call RYAB3(point,z)
+        call ryab_3d(point,res)
 
         return
 
-    endfunction FUNCINTERP
+    endfunction rspline3d
 
 
-    SUBROUTINE RYAB3(Y,RES)
+    pure subroutine ryab_3d(Y,RES)
         ! To calculate two-dimensional Ryabenkii spline
         ! with P=2,s=1
-        ! USE RYABMOD, only: NDIM, X
-        IMPLICIT NONE
-        REAL(8), INTENT(IN):: Y(NDIM)
-        REAL(8), INTENT(OUT) :: RES
-        REAL(8) Q(0:3,NDIM)
-        REAL(8) T(NDIM)
-        INTEGER I,J,K,VIN(NDIM),VBASE(NDIM)
+        ! USE RYABMOD, only: p_Ndim_3d, X
+        implicit none
+        real(8), dimension(:), intent(in):: Y
+        real(8), intent(out) :: res
+        REAL(8) Q(0:3,size(Y))
+        REAL(8) T(size(Y))
+        INTEGER I,J,K,VIN(size(Y)),VBASE(size(Y))
         !---------------------------------
 
-        Q(0,:)=1.d0
+        Q(0,:) = 1.d0
 
-        Q(1,:)=Y-X(-1,:)
+        Q(1,:) = Y-V_3d(-1,:)
 
-        Q(2,:)=0.5d0*(Y-X(-1,:))*(Y-X(0,:))
+        Q(2,:) = 0.5d0*(Y-V_3d(-1,:)) * (Y-V_3d(0,:))
 
-        T=(Y-X(0,:))/(X(1,:)-X(0,:))
-        Q(3,:)=0.5d0*(X(1,:)-X(0,:))**2*(X(2,:)-X(-1,:))*T**3*(T-1)*(1-2.d0/3.d0*T)
+        T = (Y-V_3d(0,:)) / (V_3d(1,:)-V_3d(0,:))
+        Q(3,:) = 0.5d0*(V_3d(1,:)-V_3d(0,:))**2 * (V_3d(2,:)-V_3d(-1,:)) * T**3 * (T-1) * (1-2.d0/3.d0*T)
 
-        VBASE=-1
-        RES=0.D0
+        VBASE = -1
+        RES = 0.D0
 
         DO I=0,3
             VIN(1)=I
@@ -118,25 +120,25 @@ MODULE RYABMOD
             END DO
         END DO
 
-    END SUBROUTINE RYAB3
+    END SUBROUTINE ryab_3d
     !=======================================================
     !*******************************************************
 
-    RECURSIVE FUNCTION DELTA3(VIN,VBASE) RESULT(RES)
+    pure RECURSIVE FUNCTION DELTA3(VIN,VBASE) RESULT(RES)
         ! To calculate 3D Delta_X^I*Delta_Y^J*Delta_Z^K F_{M,N,P}
         ! VIN=(/I,J,K/), VBASE=(/M,N,P/)
-        ! USE RYABMOD, only: NDIM, X, F
         IMPLICIT NONE
+        INTEGER, dimension(p_Ndim_3d), intent(in) :: VIN, VBASE
+
         REAL(8) RES
-        INTEGER K,I,J,M,N
-        INTEGER VIN(NDIM),VBASE(NDIM)
-        INTEGER V1(NDIM),V2(NDIM)
+        INTEGER K
+        INTEGER V1(p_Ndim_3d),V2(p_Ndim_3d)
         !--------------------------------------
 
         K=MAXLOC(VIN,DIM=1)
 
         IF(VIN(K).EQ.0)THEN
-            RES = F(VBASE(1),VBASE(2),VBASE(3))
+            RES = f_3d(VBASE(1),VBASE(2),VBASE(3))
             RETURN
         END IF
 
@@ -145,7 +147,7 @@ MODULE RYABMOD
         V2 = VBASE
         V2(K) = V2(K)+1
 
-        RES = VIN(K)*(DELTA3(V1,V2)-DELTA3(V1,VBASE)) / (X(VBASE(K)+VIN(K),K)-X(VBASE(K),K))
+        RES = VIN(K)*(DELTA3(V1,V2)-DELTA3(V1,VBASE)) / (V_3d(VBASE(K)+VIN(K),K)-V_3d(VBASE(K),K))
 
         RETURN
     END FUNCTION

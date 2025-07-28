@@ -1,12 +1,17 @@
 program MAIN
-    use datas
-    use RYABMOD
+    ! use datas
+    use RYABMOD, only: rspline3d, p_Ndim_3d
     implicit none
     
-    real(8) s,per(NDIM)
+    real(8) s, per(p_Ndim_3d)
     real :: t1, t2
 
-    integer K, c
+    ! integer K
+    integer :: c
+
+    real(8), dimension(:), allocatable :: TpTab, RhoTab, lnTimeTab
+    real(8), dimension(:,:,:), allocatable :: arr_dump
+    integer :: n_tp, n_rho, n_times
 
     call load
 
@@ -30,7 +35,7 @@ program MAIN
       per(2)=RhoTab(5) !RhoTab(2)+s*(RhoTab(n_rho-1)-RhoTab(2))
       per(3)=lnTimeTab(3) !lnTimeTab(2)+s*(lnTimeTab(n_times-1)-lnTimeTab(2))
 
-      write(11,'(10es23.15)') per(1),FUNCINTERP(per)
+      write(11,'(10es23.15)') per(1), rspline3d(n_tp, n_rho, n_times, TpTab, RhoTab, lnTimeTab, arr_dump, per) 
       ! print*,s
       !  read*
       s=s+1.d-4
@@ -41,7 +46,48 @@ program MAIN
     ! Code segment to be timed
     CALL CPU_TIME(t2)
 
-    PRINT *, 'Time taken for ', c, ' calls of FUNCINTERP: ', t2 - t1, ' seconds.'
+    PRINT *, 'Time taken for ', c, ' calls of rspline3d: ', t2 - t1, ' seconds.'
 
     stop
+
+    contains
+
+
+    subroutine  load
+      ! use datas
+      implicit none
+      character(30) fname
+      integer :: ierr, ui
+
+      fname = 'data/neM20Ni01Z002.dump'
+
+      write(*,"(A,A)") 'Loading from file: ', trim(fname);
+
+      open(newunit=ui, file=trim(fname), status='unknown', form='formatted', IOSTAT=ierr);
+      read(ui,*) n_tp, n_rho, n_times
+      write(*,*) ' n_tp, n_rho, n_times: ', n_tp, n_rho, n_times
+
+      allocate(TpTab(n_tp),RhoTab(n_rho),lnTimeTab(n_times))
+      allocate(arr_dump(n_tp,n_rho,n_times))
+
+      read(ui,*) TpTab
+      read(ui,*) RhoTab
+      read(ui,*) lnTimeTab
+      read(ui,*) arr_dump
+
+      close(ui)
+
+      write(*,"(A,A/)") ' Show data ';
+
+
+      write(*,*) 'TpTab: ', TpTab
+      !		read*
+      write(*,*) 'RhoTab: ', RhoTab
+      !		read*
+      write(*,*) 'lnTimeTab: ', lnTimeTab
+      !		read*
+      write(*,*) 'arr_dump: ', arr_dump
+      ! read*
+
+    end subroutine  load
 end program
