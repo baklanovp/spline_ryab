@@ -10,7 +10,7 @@ program MAIN
 
     ! integer K
     integer :: c
-
+    integer :: ierr
     real(dp), dimension(:), allocatable :: TpTab, RhoTab, lnTimeTab
     real(dp), dimension(:,:,:), allocatable :: arr_dump
     integer :: n_tp, n_rho, n_times
@@ -31,7 +31,7 @@ program MAIN
 
     c = 0
     s=0.d0
-    CALL CPU_TIME(t1)
+    call cpu_time(t1)
     
     do while(s.le.1.d0)
       c = c+1
@@ -39,7 +39,10 @@ program MAIN
       per(2)=RhoTab(5) !RhoTab(2)+s*(RhoTab(n_rho-1)-RhoTab(2))
       per(3)=lnTimeTab(3) !lnTimeTab(2)+s*(lnTimeTab(n_times-1)-lnTimeTab(2))
 
-      write(11,'(10es23.15)') per(1), rspline%value(per) 
+      write(11,'(10es23.15)') per(1), rspline%value(per, ierr) 
+      if (ierr > 0) then
+        call rspline%check_value(per, ierr)
+      endif
       ! print*,s
       !  read*
       s=s+1.d-4
@@ -48,9 +51,9 @@ program MAIN
     close(11)
 
     ! Code segment to be timed
-    CALL CPU_TIME(t2)
+    call cpu_time(t2)
 
-    PRINT *, 'Time taken for ', c, ' calls of rspline3d: ', t2 - t1, ' seconds.'
+    write(*,*) 'Time taken for ', c, ' calls of rspline3d: ', t2 - t1, ' seconds.'
 
     stop
 

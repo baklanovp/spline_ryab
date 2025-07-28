@@ -22,6 +22,7 @@ module ryabmod
         contains
             procedure :: init => spline3d_init
             procedure :: value => spline3d_value
+            procedure :: check_value => spline3d_check_value
     end type spline3d_type
 
 
@@ -60,41 +61,70 @@ module ryabmod
     end subroutine spline3d_init
 
 
-    real(dp) function spline3d_value(this, point) result(res)
-        ! use ryabmod
-        implicit none
+    subroutine spline3d_check_value(this, point, ierr)
         class(spline3d_type), intent(inout)  :: this
         real(8), intent(in) :: point(p_dim_3d)
-
-        logical :: reload
-        logical :: first_run=.true.
+        integer, intent(in) :: ierr
 
         associate(n_x=>this%n_x, n_y=>this%n_y, n_z=>this%n_z)
         associate(x_tab=>this%x_tab, y_tab=>this%y_tab, z_tab=>this%z_tab)
-        associate(n_cur=>this%n_cur, V_3d=>this%V_3d, f_3d=>this%f_3d, funcTab=>this%funcTab)
-
-        !------/checking if current position is not out of the table's ranges/------
-        if(point(1).lt.x_tab(2).or.point(1).gt.x_tab(n_x-1))then
+        if(ierr == 10)then
             print*,'variables are out of range'
             print*,'X',x_tab(2),point(1),x_tab(n_x-1)
             read*
             stop
         end if
 
-        if(point(2).lt.y_tab(2).or.point(2).gt.y_tab(n_y-1))then
+        if(ierr == 20)then
             print*,'variables are out of range'
             print*,'Y',y_tab(2),point(2),y_tab(n_y-1)
             read*
             stop
         end if
 
-        if(point(3).lt.z_tab(2).or.point(3).gt.z_tab(n_z-1))then
+        if(ierr == 30)then
             print*,'variables are out of range'
             print*,'res',z_tab(2),point(3),z_tab(n_z-1)
             read*
             stop
         end if
 
+        endassociate
+        endassociate
+    end subroutine spline3d_check_value
+
+
+    real(dp) function spline3d_value(this, point, ierr) result(res)
+        ! use ryabmod
+        implicit none
+        class(spline3d_type), intent(inout)  :: this
+        real(8), intent(in) :: point(p_dim_3d)
+        integer, intent(out) :: ierr
+
+        logical :: reload
+        logical :: first_run=.true.
+
+        ierr = 0
+
+        associate(n_x=>this%n_x, n_y=>this%n_y, n_z=>this%n_z)
+        associate(x_tab=>this%x_tab, y_tab=>this%y_tab, z_tab=>this%z_tab)
+        associate(n_cur=>this%n_cur, V_3d=>this%V_3d, f_3d=>this%f_3d, funcTab=>this%funcTab)
+
+        !------/checking if current position is not out of the table's ranges/------
+        if(point(1) < x_tab(2) .or. point(1) > x_tab(n_x-1))then
+            ierr = 10
+            return            
+        end if
+
+        if(point(2) < y_tab(2) .or. point(2) > y_tab(n_y-1))then
+            ierr = 20
+            return            
+        end if
+
+        if(point(3) < z_tab(2) .or. point(3) > z_tab(n_z-1))then
+            ierr = 30
+            return            
+        end if
 
         reload=.false.
 
@@ -104,19 +134,19 @@ module ryabmod
         end if
 
         !---------/check if we're at the old xyz box (from the previous call)/----------------
-        if(reload.or.point(1).lt.x_tab(n_cur(1)).or.point(1).gt.x_tab(n_cur(1)+1))then
+        if(reload .or. point(1) < x_tab(n_cur(1)) .or. point(1) > x_tab(n_cur(1)+1))then
             reload=.true.
-            n_cur(1)=minloc(point(1)-x_tab,mask=point(1)-x_tab.ge.0.d0,dim=1)
+            n_cur(1)=minloc(point(1)-x_tab,mask=point(1)-x_tab >= 0.d0,dim=1)
         end if
 
-        if(reload.or.point(2).lt.y_tab(n_cur(2)).or.point(2).gt.y_tab(n_cur(2)+1))then
+        if(reload .or. point(2) < y_tab(n_cur(2)) .or. point(2) > y_tab(n_cur(2)+1))then
             reload=.true.
-            n_cur(2)=minloc(point(2)-y_tab,mask=point(2)-y_tab.ge.0.d0,dim=1)
+            n_cur(2)=minloc(point(2)-y_tab,mask=point(2)-y_tab >= 0.d0,dim=1)
         end if
 
-        if(reload.or.point(3).lt.z_tab(n_cur(3)).or.point(3).gt.z_tab(n_cur(3)+1))then
+        if(reload .or. point(3) < z_tab(n_cur(3)) .or. point(3) > z_tab(n_cur(3)+1))then
             reload=.true.
-            n_cur(3)=minloc(point(3)-z_tab,mask=point(3)-z_tab.ge.0.d0,dim=1)
+            n_cur(3)=minloc(point(3)-z_tab,mask=point(3)-z_tab >= 0.d0,dim=1)
         end if
 
         if(reload)then
@@ -125,23 +155,21 @@ module ryabmod
             V_3d(:,3) = z_tab(n_cur(3)-1:n_cur(3)+2)
             f_3d = funcTab( n_cur(1)-1:n_cur(1)+2, n_cur(2)-1:n_cur(2)+2, n_cur(3)-1:n_cur(3)+2 )
         end if
-        
-        endassociate
-        endassociate
-        endassociate
 
-        call ryab_3d(this, point,res)
+        call ryab_3d(V_3d, f_3d, point,res)
 
+        endassociate
+        endassociate
+        endassociate
         return
-
     endfunction spline3d_value
 
 
-    pure subroutine ryab_3d(this,Y,RES)
-        ! To calculate two-dimensional Ryabenkii spline
-        ! with P=2,s=1
+    pure subroutine ryab_3d(V_3d, f_3d, Y, RES)
+        ! To calculate two-dimensional Ryabenkii spline with P=2,s=1
         implicit none
-        type(spline3d_type), intent(in)  :: this
+        real(dp), dimension(-1:2,p_dim_3d), intent(in) :: V_3d
+        real(dp), dimension(-1:2,-1:2,-1:2), intent(in) :: f_3d
 
         real(8), dimension(:), intent(in):: Y
         real(8), intent(out) :: res
@@ -149,8 +177,6 @@ module ryabmod
         real(dp) :: T(size(Y))
         INTEGER I,J,K,VIN(size(Y)),VBASE(size(Y))
         !---------------------------------
-        associate(V_3d=>this%V_3d)
-
         Q(0,:) = 1.d0
 
         Q(1,:) = Y-V_3d(-1,:)
@@ -159,7 +185,6 @@ module ryabmod
 
         T = (Y-V_3d(0,:)) / (V_3d(1,:)-V_3d(0,:))
         Q(3,:) = 0.5d0*(V_3d(1,:)-V_3d(0,:))**2 * (V_3d(2,:)-V_3d(-1,:)) * T**3 * (T-1) * (1-2.d0/3.d0*T)
-        endassociate
 
         VBASE = -1
         RES = 0.D0
@@ -170,22 +195,20 @@ module ryabmod
                 VIN(2)=J
                 DO K=0,3
                 VIN(3)=K
-                RES=RES+Q(I,1)*Q(J,2)*Q(K,3)*DELTA3(this,VIN,VBASE)
+                RES=RES+Q(I,1)*Q(J,2)*Q(K,3)*DELTA3(V_3d, f_3d, VIN,VBASE)
                 END DO
             END DO
         END DO
-
-
-    END SUBROUTINE ryab_3d
+    end subroutine ryab_3d
     !=======================================================
     !*******************************************************
 
-    pure RECURSIVE FUNCTION DELTA3(this, VIN,VBASE) RESULT(RES)
+    pure recursive function delta3(V_3d, f_3d, VIN,VBASE) RESULT(RES)
         ! To calculate 3D Delta_X^I*Delta_Y^J*Delta_Z^K F_{M,N,P}
         ! VIN=(/I,J,K/), VBASE=(/M,N,P/)
         IMPLICIT NONE
-        type(spline3d_type), intent(in)  :: this
-
+        real(dp), dimension(-1:2,p_dim_3d), intent(in) :: V_3d
+        real(dp), dimension(-1:2,-1:2,-1:2), intent(in) :: f_3d
         INTEGER, dimension(p_dim_3d), intent(in) :: VIN, VBASE
 
         real(dp) :: RES
@@ -193,10 +216,7 @@ module ryabmod
         INTEGER V1(p_dim_3d),V2(p_dim_3d)
         !--------------------------------------
 
-        K=MAXLOC(VIN,DIM=1)
-
-        associate(V_3d=>this%V_3d, f_3d=>this%f_3d)
-
+        K = MAXLOC(VIN,DIM=1)
         IF(VIN(K).EQ.0)THEN
             RES = f_3d(VBASE(1),VBASE(2),VBASE(3))
             RETURN
@@ -207,11 +227,9 @@ module ryabmod
         V2 = VBASE
         V2(K) = V2(K)+1
 
-        RES = VIN(K)*(DELTA3(this, V1,V2)-DELTA3(this, V1,VBASE)) / (V_3d(VBASE(K)+VIN(K),K)-V_3d(VBASE(K),K))
-
-        endassociate
-        RETURN
-    END FUNCTION
+        RES = VIN(K)*(DELTA3(V_3d, f_3d, V1,V2)-DELTA3(V_3d, f_3d, V1,VBASE)) / (V_3d(VBASE(K)+VIN(K),K)-V_3d(VBASE(K),K))
+        return
+    end function
 
 
     subroutine dalloc1d(name, n, a, initial, path)
