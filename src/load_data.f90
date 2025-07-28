@@ -42,7 +42,7 @@ end module
         write(*,*) 'lnTimeTab: ', lnTimeTab
 !		read*
         write(*,*) 'arr_dump: ', arr_dump
-        read*
+        ! read*
 
     end subroutine  load
     
