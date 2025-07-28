@@ -9,6 +9,6 @@ module ryabmod
     public :: spline4d_type, p_dim_4d
 
 
-    character(len=*), parameter  :: mdl_name = 'ryabmod'
+    character(len=*), parameter, private  :: mdl_name = 'ryabmod'
 
 end module ryabmod

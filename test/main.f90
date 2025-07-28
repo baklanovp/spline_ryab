@@ -35,7 +35,7 @@ contains
     ! stop
 
 
-    call rspline%init(n_tp, n_rho, n_times, TpTab, RhoTab, lnTimeTab, arr_dump)
+    call rspline%init(TpTab, RhoTab, lnTimeTab, arr_dump)
 
     c = 0
     s=0.d0

@@ -29,31 +29,31 @@ module rspline3d
     contains
 
 
-    subroutine spline3d_init(this, n_x, n_y, n_z, x_tab, y_tab, z_tab, funcTab) 
+    subroutine spline3d_init(this, x_tab, y_tab, z_tab, funcTab) 
         class(spline3d_type), intent(inout)  :: this
         real(8), dimension(:), intent(in) :: x_tab, y_tab, z_tab
         real(8), dimension(:,:,:) :: funcTab
-        integer, intent(in)  :: n_x, n_y, n_z
         character(len=*), parameter ::  subrtn_name = 'spline3d_init', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
         integer :: ierr               
         ! TODO add checking
 
-        this%n_x = n_x
-        this%n_y = n_y
-        this%n_z = n_z
+        this%n_x = size(x_tab)
+        this%n_y = size(y_tab)
+        this%n_z = size(z_tab)
 
-        call alloc1d('x_tab',  n_x, this%x_tab, path=fullPathSubrtn)
+        call alloc1d('x_tab',  this%n_x, this%x_tab, path=fullPathSubrtn)
         this%x_tab = x_tab
-        call alloc1d('y_tab',  n_y, this%y_tab, path=fullPathSubrtn)
+        call alloc1d('y_tab',  this%n_y, this%y_tab, path=fullPathSubrtn)
         this%y_tab = y_tab
-        call alloc1d('z_tab',  n_z, this%z_tab, path=fullPathSubrtn)
+        call alloc1d('z_tab',  this%n_z, this%z_tab, path=fullPathSubrtn)
         this%z_tab = z_tab
 
-        allocate(this%funcTab(n_x,n_y,n_z), STAT=ierr);
+        allocate(this%funcTab(this%n_x,this%n_y,this%n_z), STAT=ierr);
         if (ierr /= 0) then
-            write(*, '(2a, 3i4)') fullPathSubrtn, ' Not enough memory for funcTab where n_x,n_y,n_z =', n_x,n_y,n_z;
+            write(*, '(2a, 3i4)') fullPathSubrtn, &
+               ' Not enough memory for funcTab where n_x,n_y,n_z =', this%n_x,this%n_y,this%n_z;
             error stop 666;
         endif
         this%funcTab = funcTab

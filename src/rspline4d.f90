@@ -30,34 +30,34 @@ module rspline4d
     contains
 
 
-    subroutine spline4d_init(this, n_x, n_y, n_z, n_w, x_tab, y_tab, z_tab, w_tab, funcTab) 
+    subroutine spline4d_init(this, x_tab, y_tab, z_tab, w_tab, funcTab) 
         class(spline4d_type), intent(inout)  :: this
         real(8), dimension(:), intent(in) :: x_tab, y_tab, z_tab, w_tab
         real(8), dimension(:,:,:,:) :: funcTab
-        integer, intent(in)  :: n_x, n_y, n_z, n_w
         character(len=*), parameter ::  subrtn_name = 'spline4d_init', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
         integer :: ierr               
         ! TODO add checking
 
-        this%n_x = n_x
-        this%n_y = n_y
-        this%n_z = n_z
-        this%n_w = n_w
+        this%n_x = size(x_tab)
+        this%n_y = size(y_tab)
+        this%n_z = size(z_tab)
+        this%n_w = size(w_tab)
 
-        call alloc1d('x_tab', n_x, this%x_tab, path=fullPathSubrtn)
+        call alloc1d('x_tab', this%n_x, this%x_tab, path=fullPathSubrtn)
         this%x_tab = x_tab
-        call alloc1d('y_tab', n_y, this%y_tab, path=fullPathSubrtn)
+        call alloc1d('y_tab', this%n_y, this%y_tab, path=fullPathSubrtn)
         this%y_tab = y_tab
-        call alloc1d('z_tab', n_z, this%z_tab, path=fullPathSubrtn)
+        call alloc1d('z_tab', this%n_z, this%z_tab, path=fullPathSubrtn)
         this%z_tab = z_tab
-        call alloc1d('w_tab', n_w, this%w_tab, path=fullPathSubrtn)
+        call alloc1d('w_tab', this%n_w, this%w_tab, path=fullPathSubrtn)
         this%w_tab = w_tab
 
-        allocate(this%funcTab(n_x,n_y,n_z,n_w), STAT=ierr);
+        allocate(this%funcTab(this%n_x,this%n_y,this%n_z,this%n_w), STAT=ierr);
         if (ierr /= 0) then
-            write(*, '(2a, 4i4)') fullPathSubrtn, ' Not enough memory for funcTab where n_x,n_y,n_z,n_w =', n_x,n_y,n_z,n_w;
+            write(*, '(2a, 4i4)') fullPathSubrtn, ' Not enough memory for funcTab where n_x,n_y,n_z,n_w =', &
+                this%n_x, this%n_y, this%n_z, this%n_w;
             error stop 666;
         endif
         this%funcTab = funcTab
@@ -218,10 +218,9 @@ module rspline4d
             do J=0,3
                 VIN(2)=J
                 do K=0,3
-                VIN(3)=K
-                	do L=0,3
+                    VIN(3)=K
+                    do L=0,3
                         VIN(4)=L
-                        ! RES=RES+Q(I,1)*Q(J,2)*Q(K,3)*DELTA4D(V_4d, f_4d, VIN,VBASE)
                         RES = RES+Q(I,1)*Q(J,2)*Q(K,3)*Q(L,4)*DELTA4D(V_4d, f_4d, VIN,VBASE)
                     enddo
                 enddo
