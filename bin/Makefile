@@ -211,4 +211,4 @@ cleandata:  ## rm ../run/strad/nohup.out ../run/strad/core* ../run/strad/fort.*
 	$(DEL) $(RUNDIR)/*.dump
 
 cleanall:  clean  ## rm all temporry files and executable files
-	$(DEL) $(RUNDIR)/$(PROGloaddata) $(RUNDIR)/$(PROGryabenky_spline)  $(RUNDIR)/$(PROG_ay3d)
+	$(DEL) $(RUNDIR)/$(PROGloaddata)  $(RUNDIR)/$(PROG_ay3d)
