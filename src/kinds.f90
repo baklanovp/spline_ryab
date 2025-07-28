@@ -7,7 +7,9 @@ module kinds
      private
      public :: sp, dp, qp, isp, idp, ip, i4, i8
      public :: kinds_write_info
+     public :: alloc1d
 
+     character(len=*), parameter, private  :: mdl_name = 'kinds'
      ! integer, parameter :: sp = selected_real_kind(p=4)  ! standart
      ! integer, parameter :: sp = selected_real_kind(p=5)  ! same as MESA
      ! integer, parameter :: dp = selected_real_kind(p=15)
@@ -22,7 +24,42 @@ module kinds
      integer, parameter :: idp = i8 !SELECTED_INT_KIND (18)
      integer, parameter :: ip = idp ! selected_int_kind(14)
 
-     CONTAINS
+
+     interface alloc1d
+          procedure :: dalloc1d
+     end interface alloc1d
+     
+
+     contains
+
+
+     subroutine dalloc1d(name, n, a, initial, path)
+          character(len=*), intent(in) :: name
+          integer, intent(in) :: n
+          real(dp), intent(in), optional :: initial
+          character(len=*), optional ::  path;
+          real(dp), dimension(:), allocatable,  intent(out) :: a
+
+          character(len=*), parameter ::  subrtn_name = 'dalloc1d', &
+                         fullPathSubrtn = mdl_name//'.'//subrtn_name
+
+          character(len=99) ::  l_path;
+          integer :: ierr;
+
+          l_path = fullPathSubrtn
+          if( present(path)) l_path = path;
+
+          allocate (a(n), STAT=ierr)
+          if (ierr /= 0) then
+               write(*, '(4a, i4)') fullPathSubrtn, ' Not enough memory for ', name, ' N=',n;
+               error stop 666;
+          endif
+
+          a(:) = 0._dp
+          if ( present(initial)) then
+               a(:) = initial
+          endif
+     end subroutine dalloc1d
 
      subroutine kinds_write_info (iw)
           integer, intent(in) :: iw

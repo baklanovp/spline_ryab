@@ -136,7 +136,8 @@ INCL =
 OBJDIR = obj
 
 #--------------------------------------------
-FILES_ay3d = kinds.f90 ryabenkiy.f90  main.f90
+FILES_ay3d = kinds.f90 rspline3d.f90 rspline4d.f90 \
+             ryabenky.f90   main.f90
 TEMP := $(patsubst %.f90,%.o, $(FILES_ay3d))
 OBJ_ay3d :=  $(TEMP:.f=.o)
 PROG_ay3d = xtest_ay3d.exe 
@@ -146,12 +147,6 @@ FILES_loaddata =  test_loaddata.f90
 TEMP := $(patsubst %.f90,%.o, $(FILES_loaddata))
 OBJloaddata :=  $(TEMP:.f=.o)
 PROGloaddata = xtest_loaddata.exe 
-
-#--------------------------------------------
-FILES_ryabenky_spline =  ryabenky_spline.f90 test_ryabenky_nonuniform.f90
-TEMP := $(patsubst %.f90,%.o, $(FILES_ryabenky_spline))
-OBJryabenky_spline :=  $(TEMP:.f=.o)
-PROGryabenky_spline = xtest_ryabenky_spline.exe 
 
 
 
@@ -181,13 +176,6 @@ ay3d: $(OBJ_ay3d)  ## compile spline by AV Yudin for 3d
 	$(FC) $(LDFLAGS) $(PROG_ay3d) $(OBJ_ay3d) $(LIBS)
 	$(MV) $(PROG_ay3d)  $(RUNDIR)     
 	@ls -l $(RUNDIR)/$(PROG_ay3d)
-
-
-
-spline: $(OBJryabenky_spline)  ## compile spline lib and test
-	$(FC) $(LDFLAGS) $(PROGryabenky_spline) $(OBJryabenky_spline) $(LIBS)
-	$(MV) $(PROGryabenky_spline)  $(RUNDIR)     
-	@ls -l $(RUNDIR)/$(PROGryabenky_spline)
 
 
 load: $(OBJloaddata)  ## load dump data 

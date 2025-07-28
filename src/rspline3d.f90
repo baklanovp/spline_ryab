@@ -1,13 +1,13 @@
-module ryabmod
-    use kinds,            only: dp
+module rspline3d
+    use kinds,   only: dp, alloc1d
 
     implicit none
     private
 
     public :: spline3d_type
 
+    character(len=*), parameter  :: mdl_name = 'rspline3d'
     integer, parameter, public :: p_dim_3d = 3 ! dimension of the tables
-    character(len=*), parameter  :: mdl_name = 'ryabmod'
 
     type spline3d_type
         integer :: ndim = p_dim_3d   ! dimension of the tables
@@ -44,11 +44,11 @@ module ryabmod
         this%n_y = n_y
         this%n_z = n_z
 
-        call dalloc1d('x_tab',  n_x, this%x_tab, path=fullPathSubrtn)
+        call alloc1d('x_tab',  n_x, this%x_tab, path=fullPathSubrtn)
         this%x_tab = x_tab
-        call dalloc1d('y_tab',  n_y, this%y_tab, path=fullPathSubrtn)
+        call alloc1d('y_tab',  n_y, this%y_tab, path=fullPathSubrtn)
         this%y_tab = y_tab
-        call dalloc1d('z_tab',  n_z, this%z_tab, path=fullPathSubrtn)
+        call alloc1d('z_tab',  n_z, this%z_tab, path=fullPathSubrtn)
         this%z_tab = z_tab
 
         allocate(this%funcTab(n_x,n_y,n_z), STAT=ierr);
@@ -231,34 +231,5 @@ module ryabmod
         return
     end function
 
-
-    subroutine dalloc1d(name, n, a, initial, path)
-      character(len=*), intent(in) :: name
-      integer, intent(in) :: n
-      real(dp), intent(in), optional :: initial
-      character(len=*), optional ::  path;
-      real(dp), dimension(:), allocatable,  intent(out) :: a
-
-      character(len=*), parameter ::  subrtn_name = 'dalloc1d', &
-                     fullPathSubrtn = mdl_name//'.'//subrtn_name
-    
-      character(len=99) ::  l_path;
-      integer :: ierr;
-
-      l_path = fullPathSubrtn
-      if( present(path)) l_path = path;
-
-      allocate (a(n), STAT=ierr)
-      if (ierr /= 0) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Not enough memory for ', name, ' N=',n;
-            error stop 666;
-      endif
-
-      a(:) = 0._dp
-      if ( present(initial)) then
-            a(:) = initial
-      endif
-   end subroutine dalloc1d
-
-END MODULE
+end module rspline3d
 
