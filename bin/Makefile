@@ -136,7 +136,7 @@ INCL =
 OBJDIR = obj
 
 #--------------------------------------------
-FILES_ay3d =   load_data.f90 ryabenkiy.f90 FuncInterp.f90 main.f90
+FILES_ay3d =   load_data.f90 ryabenkiy.f90  main.f90
 TEMP := $(patsubst %.f90,%.o, $(FILES_ay3d))
 OBJ_ay3d :=  $(TEMP:.f=.o)
 PROG_ay3d = xtest_ay3d.exe 

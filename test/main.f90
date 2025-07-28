@@ -2,7 +2,7 @@ program MAIN
     use datas
     use RYABMOD
     implicit none
-    real(8) FUNCINTERP
+    
     real(8) s,per(NDIM)
     real :: t1, t2
 
