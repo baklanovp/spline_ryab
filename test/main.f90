@@ -75,7 +75,7 @@ contains
     character(30) fname
     integer :: ierr, ui
 
-    fname = 'data/neM20Ni01Z002.dump'
+    fname = 'data/neM20Ni01Z002_3d.dump'
 
     write(*,"(A,A)") 'Loading from file: ', trim(fname);
 
