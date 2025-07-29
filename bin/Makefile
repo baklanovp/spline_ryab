@@ -136,10 +136,13 @@ INCL =
 OBJDIR = obj
 
 #--------------------------------------------
-FILES_ay3d = kinds.f90 rspline3d.f90 rspline4d.f90 \
-             ryabenky.f90   main.f90
-TEMP := $(patsubst %.f90,%.o, $(FILES_ay3d))
-OBJ_ay3d :=  $(TEMP:.f=.o)
+FILES_lib_ryab = kinds.f90 rspline3d.f90 rspline4d.f90 ryabenky.f90 
+TEMP := $(patsubst %.f90,%.o, $(FILES_lib_ryab))
+OBJ_lib_ryab :=  $(TEMP:.f=.o)
+
+
+FILES_ay3d =  main.f90
+OBJ_ay3d :=  $(OBJ_lib_ryab) $(FILES_ay3d:.f90=.o)
 PROG_ay3d = xtest_ay3d.exe 
 
 #--------------------------------------------
@@ -168,9 +171,15 @@ PROGloaddata = xtest_loaddata.exe
 
 .PHONY:
 
-all: ay3d
+TARGET=libspline_ryab.a
+
+all: lib
 # 	@echo $(LIBS)
 
+lib: $(OBJ_lib_ryab)  ##  Compile and link libspline_ryab.a
+	ar rc $(TARGET) $^
+	ranlib $(TARGET)
+  
 
 ay3d: $(OBJ_ay3d)  ## compile spline by AV Yudin for 3d
 	$(FC) $(LDFLAGS) $(PROG_ay3d) $(OBJ_ay3d) $(LIBS)
@@ -211,4 +220,5 @@ cleandata:  ## rm ../run/strad/nohup.out ../run/strad/core* ../run/strad/fort.*
 	$(DEL) $(RUNDIR)/*.dump
 
 cleanall:  clean  ## rm all temporry files and executable files
+	$(DEL) $(BINDIR)/$(TARGET)
 	$(DEL) $(RUNDIR)/$(PROGloaddata)  $(RUNDIR)/$(PROG_ay3d)
