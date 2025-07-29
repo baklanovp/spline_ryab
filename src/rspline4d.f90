@@ -270,7 +270,8 @@ module rspline4d
         V2 = VBASE
         V2(K) = V2(K)+1
 
-        RES = VIN(K)*(DELTA4D(V_4d, f_4d, V1,V2)-DELTA4D(V_4d, f_4d, V1,VBASE)) / (V_4d(VBASE(K)+VIN(K),K)-V_4d(VBASE(K),K))
+        RES = VIN(K) * ( DELTA4D(V_4d, f_4d, V1,V2) - DELTA4D(V_4d, f_4d, V1,VBASE) ) &
+              / ( V_4d(VBASE(K)+VIN(K),K) - V_4d(VBASE(K),K) )
         return
     end function
 

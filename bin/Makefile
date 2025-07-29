@@ -136,7 +136,7 @@ INCL =
 OBJDIR = obj
 
 #--------------------------------------------
-FILES_lib_ryab = kinds.f90 rspline3d.f90 rspline4d.f90 ryabenky.f90 
+FILES_lib_ryab = kinds.f90 rspline2d.f90  rspline3d.f90 rspline4d.f90 ryabenky.f90 
 TEMP := $(patsubst %.f90,%.o, $(FILES_lib_ryab))
 OBJ_lib_ryab :=  $(TEMP:.f=.o)
 

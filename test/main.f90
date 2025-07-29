@@ -18,7 +18,7 @@ contains
     real :: t1, t2
 
     ! integer K
-    integer :: c
+    integer :: i, c
     integer :: ierr
     real(dp), dimension(:), allocatable :: TpTab, RhoTab, lnTimeTab, LcoordTab
     real(dp), dimension(:,:,:,:), allocatable :: arr_dump
@@ -49,7 +49,7 @@ contains
       per(3) = LcoordTab(2)+s*(LcoordTab(n_coord-1)-LcoordTab(2))
       per(4) = lnTimeTab(2)+s*(lnTimeTab(n_times-1)-lnTimeTab(2))
 
-      write(11,'(10es23.15)') per(1), rspline%value(per, ierr) 
+      write(11,'(10es23.15)') (per(i),i=1,4), rspline%value(per, ierr) 
       if (ierr > 0) then
         call rspline%check_value(per, ierr)
       endif
