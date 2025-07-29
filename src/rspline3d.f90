@@ -23,6 +23,7 @@ module rspline3d
             procedure :: init => spline3d_init
             procedure :: value => spline3d_value
             procedure :: check_value => spline3d_check_value
+            procedure :: destroy => spline3d_destroy
     end type spline3d_type
 
 
@@ -59,6 +60,19 @@ module rspline3d
         this%funcTab = funcTab
 
     end subroutine spline3d_init
+
+
+    pure subroutine spline3d_destroy(this)
+        implicit none
+        class(spline3d_type), intent(inout)  :: this
+        this%n_x    = 0
+        this%n_y    = 0
+        this%n_z    = 0
+        if (allocated(this%x_tab))      deallocate(this%x_tab)
+        if (allocated(this%y_tab))      deallocate(this%y_tab)
+        if (allocated(this%z_tab))      deallocate(this%z_tab)
+        if (allocated(this%funcTab))    deallocate(this%funcTab)
+    end subroutine spline3d_destroy
 
 
     subroutine spline3d_check_value(this, point, ierr)

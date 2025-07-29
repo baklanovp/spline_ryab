@@ -1,14 +1,74 @@
-program MAIN
+program main
     use kinds,            only: dp
     implicit none
     
 
-    call test_spline3d;
-
+    ! call test_spline3d;
+    call test_spline4d;
 
 contains
     
   
+  
+  subroutine test_spline4d
+    use ryabmod, only: spline4d_type, p_dim_4d
+
+    type(spline4d_type) :: rspline
+    real(dp) s, per(p_dim_4d)
+    real :: t1, t2
+
+    ! integer K
+    integer :: c
+    integer :: ierr
+    real(dp), dimension(:), allocatable :: TpTab, RhoTab, lnTimeTab, LcoordTab
+    real(dp), dimension(:,:,:,:), allocatable :: arr_dump
+    integer :: n_tp, n_rho, n_coord, n_times
+
+    call load_4d(n_tp, n_rho, n_coord, n_times, TpTab, RhoTab, LcoordTab, lnTimeTab, arr_dump)
+
+    open(11,file='result_4d.dat')
+
+    ! do K=1,n_tp
+    !   write(11,'(10es23.15)') TpTab(K),arr_dump(K,5,3)
+    ! end do
+
+    ! close(11)
+    ! stop
+
+
+    call rspline%init(TpTab, RhoTab, LcoordTab, lnTimeTab, arr_dump)
+
+    c = 0
+    s=0.d0
+    call cpu_time(t1)
+    
+    do while(s.le.1.d0)
+      c = c+1
+      per(1) = TpTab(2)+s*(TpTab(n_tp-1)-TpTab(2))
+      per(2) = RhoTab(2)+s*(RhoTab(n_rho-1)-RhoTab(2))
+      per(3) = LcoordTab(2)+s*(LcoordTab(n_coord-1)-LcoordTab(2))
+      per(4) = lnTimeTab(2)+s*(lnTimeTab(n_times-1)-lnTimeTab(2))
+
+      write(11,'(10es23.15)') per(1), rspline%value(per, ierr) 
+      if (ierr > 0) then
+        call rspline%check_value(per, ierr)
+      endif
+      ! print*,s
+      !  read*
+      s=s+1.d-4
+    end do
+
+    close(11)
+    call rspline%destroy()
+    ! Code segment to be timed
+    call cpu_time(t2)
+
+    write(*,*) 'Time taken for ', c, ' calls of rspline4d: ', t2 - t1, ' seconds.'
+
+    stop
+  endsubroutine test_spline4d
+
+
   subroutine test_spline3d
     use ryabmod, only: spline3d_type, p_dim_3d
 
@@ -25,7 +85,7 @@ contains
 
     call load_3d(n_tp, n_rho, n_times, TpTab, RhoTab, lnTimeTab, arr_dump)
 
-    open(11,file='result.dat')
+    open(11,file='result_3d.dat')
 
     ! do K=1,n_tp
     !   write(11,'(10es23.15)') TpTab(K),arr_dump(K,5,3)
@@ -57,7 +117,7 @@ contains
     end do
 
     close(11)
-
+    call rspline%destroy()
     ! Code segment to be timed
     call cpu_time(t2)
 
@@ -66,6 +126,54 @@ contains
     stop
   endsubroutine test_spline3d
     
+
+  subroutine  load_4d(n_tp, n_rho, n_coord, n_times, TpTab, RhoTab, LcoordTab, lnTimeTab, arr_dump)
+    real(dp), dimension(:), allocatable, intent(out) :: TpTab, RhoTab, LcoordTab, lnTimeTab
+    real(dp), dimension(:,:,:,:), allocatable, intent(out) :: arr_dump
+    integer, intent(out) :: n_tp, n_rho, n_coord, n_times
+
+    character(30) fname
+    integer :: ierr, ui
+
+    fname = 'data/neM20Ni01Z002.4d.dump'
+
+    write(*,"(A,A)") 'Loading from file: ', trim(fname);
+
+    open(newunit=ui, file=trim(fname), status='unknown', form='formatted', IOSTAT=ierr);
+    read(ui,*) n_tp, n_rho, n_coord, n_times
+    write(*,*) ' n_tp, n_rho, n_coord, n_times: ', n_tp, n_rho, n_coord, n_times
+
+    allocate(TpTab(n_tp))
+    allocate(RhoTab(n_rho))
+    allocate(LcoordTab(n_coord))
+    allocate(lnTimeTab(n_times))
+    allocate(arr_dump(n_tp,n_rho,n_coord,n_times))
+
+    read(ui,*) TpTab
+    read(ui,*) RhoTab
+    read(ui,*) LcoordTab
+    read(ui,*) lnTimeTab
+
+    read(ui,*) arr_dump
+    
+    close(ui)
+
+    write(*,"(A,A/)") ' Show data ';
+
+
+    write(*,*) 'TpTab: ', TpTab
+    !		read*
+    write(*,*) 'RhoTab: ', RhoTab
+    ! read*
+    write(*,*) 'LcoordTab: ', LcoordTab
+    !		read*
+    write(*,*) 'lnTimeTab: ', lnTimeTab
+    read*
+    write(*,*) 'arr_dump: ', arr_dump
+    read*
+
+  end subroutine  load_4d
+
 
   subroutine  load_3d(n_tp, n_rho, n_times, TpTab, RhoTab, lnTimeTab, arr_dump)
     real(dp), dimension(:), allocatable, intent(out) :: TpTab, RhoTab, lnTimeTab
@@ -107,4 +215,4 @@ contains
 
   end subroutine  load_3d
 
-end program
+end program main

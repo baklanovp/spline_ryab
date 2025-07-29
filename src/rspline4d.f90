@@ -24,6 +24,7 @@ module rspline4d
             procedure :: init => spline4d_init
             procedure :: value => spline4d_value
             procedure :: check_value => spline4d_check_value
+            procedure :: destroy => spline4d_destroy
     end type spline4d_type
 
 
@@ -63,6 +64,21 @@ module rspline4d
         this%funcTab = funcTab
 
     end subroutine spline4d_init
+
+
+    pure subroutine spline4d_destroy(this)
+        implicit none
+        class(spline4d_type), intent(inout)  :: this
+        this%n_x    = 0
+        this%n_y    = 0
+        this%n_z    = 0
+        this%n_w    = 0
+        if (allocated(this%x_tab))      deallocate(this%x_tab)
+        if (allocated(this%y_tab))      deallocate(this%y_tab)
+        if (allocated(this%z_tab))      deallocate(this%z_tab)
+        if (allocated(this%w_tab))      deallocate(this%w_tab)
+        if (allocated(this%funcTab))      deallocate(this%funcTab)
+    end subroutine spline4d_destroy
 
 
     subroutine spline4d_check_value(this, point, ierr)
@@ -257,6 +273,7 @@ module rspline4d
         RES = VIN(K)*(DELTA4D(V_4d, f_4d, V1,V2)-DELTA4D(V_4d, f_4d, V1,VBASE)) / (V_4d(VBASE(K)+VIN(K),K)-V_4d(VBASE(K),K))
         return
     end function
+
 
 end module rspline4d
 

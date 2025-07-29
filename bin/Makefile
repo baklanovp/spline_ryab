@@ -177,8 +177,8 @@ all: lib
 # 	@echo $(LIBS)
 
 lib: $(OBJ_lib_ryab)  ##  Compile and link libspline_ryab.a
-	ar rc $(TARGET) $^
-	ranlib $(TARGET)
+	ar rc -s $(TARGET) $^
+#	ar -s $(TARGET)
   
 
 ay3d: $(OBJ_ay3d)  ## compile spline by AV Yudin for 3d
