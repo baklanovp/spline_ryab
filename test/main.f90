@@ -168,9 +168,9 @@ contains
     write(*,*) 'LcoordTab: ', LcoordTab
     !		read*
     write(*,*) 'lnTimeTab: ', lnTimeTab
-    read*
+    ! read*
     write(*,*) 'arr_dump: ', arr_dump
-    read*
+    ! read*
 
   end subroutine  load_4d
 

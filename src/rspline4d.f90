@@ -89,29 +89,29 @@ module rspline4d
         associate(n_x=>this%n_x, n_y=>this%n_y, n_z=>this%n_z, n_w=>this%n_w)
         associate(x_tab=>this%x_tab, y_tab=>this%y_tab, z_tab=>this%z_tab, w_tab=>this%w_tab)
         if(ierr == 10)then
-            print*,'variables are out of range'
+            print*,'X-variables are out of range'
             print*,'X',x_tab(2),point(1),x_tab(n_x-1)
             read*
             stop
         end if
 
         if(ierr == 20)then
-            print*,'variables are out of range'
+            print*,'Y-variables  are out of range'
             print*,'Y',y_tab(2),point(2),y_tab(n_y-1)
             read*
             stop
         end if
 
         if(ierr == 30)then
-            print*,'variables are out of range'
-            print*,'res',z_tab(2),point(3),z_tab(n_z-1)
+            print*,'Z-variables 3 are out of range'
+            print*,'Z',z_tab(2),point(3),z_tab(n_z-1)
             read*
             stop
         end if
 
         if(ierr == 40)then
-            print*,'variables are out of range'
-            print*,'res',w_tab(2),point(4),w_tab(n_z-1)
+            print*,'W-variables 4 are out of range'
+            print*,'w_tab(2)= ',w_tab(2),' point(4)= ',point(4),' w_tab(n_z-1)= ',w_tab(n_w-1)
             read*
             stop
         end if
@@ -153,7 +153,7 @@ module rspline4d
             return            
         end if
 
-        if(point(4) < w_tab(2) .or. point(4) > w_tab(n_z-1))then
+        if(point(4) < w_tab(2) .or. point(4) > w_tab(n_w-1))then
             ierr = 40
             return            
         end if
