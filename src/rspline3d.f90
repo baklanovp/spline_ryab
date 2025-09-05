@@ -43,6 +43,7 @@ module rspline3d
         this%n_x = size(x_tab)
         this%n_y = size(y_tab)
         this%n_z = size(z_tab)
+        this%n_cur = 1
 
         call alloc1d('x_tab',  this%n_x, this%x_tab, path=fullPathSubrtn)
         this%x_tab = x_tab
@@ -50,6 +51,21 @@ module rspline3d
         this%y_tab = y_tab
         call alloc1d('z_tab',  this%n_z, this%z_tab, path=fullPathSubrtn)
         this%z_tab = z_tab
+        
+        if (size(funcTab,1) /= this%n_x) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(funcTab,1)= ', size(funcTab,1);
+            error stop 666;
+        endif
+
+        if (size(funcTab,2) /= this%n_y) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(funcTab,2)= ', size(funcTab,2);
+            error stop 666;
+        endif
+        
+        if (size(funcTab,3) /= this%n_z) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(z_tab)=', this%n_z,' is not equal  size(funcTab,3)= ', size(funcTab,3);
+            error stop 666;
+        endif
 
         allocate(this%funcTab(this%n_x,this%n_y,this%n_z), STAT=ierr);
         if (ierr /= 0) then
