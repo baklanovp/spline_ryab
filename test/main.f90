@@ -17,8 +17,7 @@ contains
     real(dp) s, per(p_dim_4d)
     real :: t1, t2
 
-    ! integer K
-    integer :: i, c
+    integer :: i, j, k, c, ui
     integer :: ierr
     real(dp), dimension(:), allocatable :: TpTab, RhoTab, lnTimeTab, LcoordTab
     real(dp), dimension(:,:,:,:), allocatable :: arr_dump
@@ -26,16 +25,19 @@ contains
 
     call load_4d(n_tp, n_rho, n_coord, n_times, TpTab, RhoTab, LcoordTab, lnTimeTab, arr_dump)
 
-    open(11,file='result_4d.dat')
+    
+    open(newunit=ui, file='input_4d.dat', status='unknown', form='formatted', IOSTAT=ierr);
 
-    ! do K=1,n_tp
-    !   write(11,'(10es23.15)') TpTab(K),arr_dump(K,5,3)
-    ! end do
+    do i=1,n_tp
+      do j=1,n_rho
+        write(ui,'(10es23.15)') TpTab(i), RhoTab(j), arr_dump(i,j,6,3)
+      end do
+    end do
 
-    ! close(11)
+    close(ui)
     ! stop
 
-
+    open(newunit=ui, file='result_4d.dat', status='unknown', form='formatted', IOSTAT=ierr);
     call rspline%init(TpTab, RhoTab, LcoordTab, lnTimeTab, arr_dump)
 
     c = 0
@@ -44,21 +46,30 @@ contains
     
     do while(s.le.1.d0)
       c = c+1
-      per(1) = TpTab(2)+s*(TpTab(n_tp-1)-TpTab(2))
-      per(2) = RhoTab(2)+s*(RhoTab(n_rho-1)-RhoTab(2))
-      per(3) = LcoordTab(2)+s*(LcoordTab(n_coord-1)-LcoordTab(2))
-      per(4) = lnTimeTab(2)+s*(lnTimeTab(n_times-1)-lnTimeTab(2))
+      ! per(1) = TpTab(5) 
+      per(1) = TpTab(2) + s*(TpTab(n_tp-1)-TpTab(2))
+      per(2) = RhoTab(2) + s*(RhoTab(n_rho-1)-RhoTab(2))
+      ! per(2) = RhoTab(n_rho-1) - s*(RhoTab(n_rho-1)-RhoTab(2))
+      
+      per(3) = LcoordTab(6)
+      per(4) = lnTimeTab(3)
+      write(ui,'(10es23.15)') (per(i),i=1,2), rspline%value(per, ierr)
 
-      write(11,'(10es23.15)') (per(i),i=1,4), rspline%value(per, ierr) 
+      ! per(1) = TpTab(2)+s*(TpTab(n_tp-1)-TpTab(2))
+      ! per(2) = RhoTab(2)+s*(RhoTab(n_rho-1)-RhoTab(2))
+      ! per(3) = LcoordTab(2)+s*(LcoordTab(n_coord-1)-LcoordTab(2))
+      ! per(4) = lnTimeTab(2)+s*(lnTimeTab(n_times-1)-lnTimeTab(2))
+      ! write(ui,'(10es23.15)') (per(i),i=1,4), rspline%value(per, ierr) 
+
       if (ierr > 0) then
         call rspline%check_value(per, ierr)
       endif
       ! print*,s
       !  read*
-      s=s+1.d-4
+      s=s+1.d-3
     end do
 
-    close(11)
+    close(ui)
     call rspline%destroy()
     ! Code segment to be timed
     call cpu_time(t2)
