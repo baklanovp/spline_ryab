@@ -59,8 +59,8 @@ module rspline3dvec
         this%n_vec = size(funcTab,1)
         allocate(this%funcTab(this%n_vec,this%n_x,this%n_y,this%n_z), STAT=ierr);
         if (ierr /= 0) then
-            write(*, '(2a, 4i4)') fullPathSubrtn, &
-               ' Not enough memory for funcTab where n_vec,n_x,n_y,n_z =', this%n_vec,this%n_x,this%n_y,this%n_z;
+            write(*, '(2a,i5,a, 4i4)') fullPathSubrtn, &
+               'ierr= ',ierr, ' Not enough memory for funcTab where n_vec,n_x,n_y,n_z =', this%n_vec,this%n_x,this%n_y,this%n_z;
             error stop 666;
         endif
         this%funcTab = funcTab
