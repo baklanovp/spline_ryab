@@ -10,6 +10,7 @@ module rspline2d
     integer, parameter, public :: p_dim_2d = 2 ! dimension of the tables
 
     type spline2d_type
+        logical :: first_run
         integer :: ndim = p_dim_2d   ! dimension of the tables
         real(dp) :: V_2d(-1:2,p_dim_2d)  ! local volume
         real(dp) :: f_2d(-1:2,-1:2)  ! function values in the local volume
@@ -32,12 +33,13 @@ module rspline2d
     subroutine spline2d_init(this, x_tab, y_tab, funcTab) 
         class(spline2d_type), intent(inout)  :: this
         real(8), dimension(:), intent(in) :: x_tab, y_tab
-        real(8), dimension(:,:) :: funcTab
+        real(8), dimension(:,:), intent(in) :: funcTab
         character(len=*), parameter ::  subrtn_name = 'spline2d_init', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
         integer :: ierr               
         ! TODO add checking
+        this%first_run = .true.
 
         this%n_x = size(x_tab)
         this%n_y = size(y_tab)
@@ -46,6 +48,18 @@ module rspline2d
         this%x_tab = x_tab
         call alloc1d('y_tab',  this%n_y, this%y_tab, path=fullPathSubrtn)
         this%y_tab = y_tab
+
+        this%n_cur = 1 !  todo check?
+
+        if (size(funcTab,1) /= this%n_x) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(funcTab,1)= ', size(funcTab,1);
+            error stop 666;
+        endif
+
+        if (size(funcTab,2) /= this%n_y) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(funcTab,2)= ', size(funcTab,2);
+            error stop 666;
+        endif
 
         allocate(this%funcTab(this%n_x,this%n_y), STAT=ierr);
         if (ierr /= 0) then
@@ -73,22 +87,25 @@ module rspline2d
         class(spline2d_type), intent(inout)  :: this
         real(8), intent(in) :: point(p_dim_2d)
         integer, intent(in) :: ierr
+        character(len=*), parameter ::  subrtn_name = 'spline2d_check_value'
 
         associate(n_x=>this%n_x, n_y=>this%n_y)
         associate(x_tab=>this%x_tab, y_tab=>this%y_tab)
         if(ierr == 10)then
-            print*,'variables are out of range'
-            print*,'X',x_tab(2),point(1),x_tab(n_x-1)
-            read*
+            write(*,'(A,100(1pe12.4))') 'x_tab : ',x_tab
+            print*,subrtn_name//': variables are out of range'
+            print*,'x_tab(2),point(1),x_tab(n_x-2): ',x_tab(2),point(1),x_tab(n_x-2)
+            ! read*
             stop
-        end if
+        endif
 
         if(ierr == 20)then
-            print*,'variables are out of range'
-            print*,'Y',y_tab(2),point(2),y_tab(n_y-1)
-            read*
+            write(*,'(A,100(1pe12.4))') 'y_tab : ',y_tab
+            print*, subrtn_name//': variables are out of range'
+            print*,'y_tab(2),point(2),y_tab(n_y-2): ',y_tab(2),point(2),y_tab(n_y-2)
+            ! read*
             stop
-        end if
+        endif
         endassociate
         endassociate
     end subroutine spline2d_check_value
@@ -102,7 +119,6 @@ module rspline2d
         integer, intent(out) :: ierr
 
         logical :: reload
-        logical :: first_run=.true.
 
         ierr = 0
 
@@ -111,39 +127,40 @@ module rspline2d
         associate(n_cur=>this%n_cur, V_2d=>this%V_2d, f_2d=>this%f_2d, funcTab=>this%funcTab)
 
         !------/checking if current position is not out of the table's ranges/------
-        if(point(1) < x_tab(2) .or. point(1) > x_tab(n_x-1))then
+        if(point(1) < x_tab(2) .or. point(1) >= x_tab(n_x-1))then
             ierr = 10
             return            
-        end if
+        endif
 
-        if(point(2) < y_tab(2) .or. point(2) > y_tab(n_y-1))then
+        if(point(2) < y_tab(2) .or. point(2) >= y_tab(n_y-1))then
             ierr = 20
             return            
-        end if
+        endif
 
         reload=.false.
 
-        if(first_run)then
-            first_run=.false.
+        if ( this%first_run ) then
+            this%first_run=.false.
             reload=.true.
-        end if
+        endif
 
         !---------/check if we're at the old xyz box (from the previous call)/----------------
         if(reload .or. point(1) < x_tab(n_cur(1)) .or. point(1) > x_tab(n_cur(1)+1))then
             reload=.true.
-            n_cur(1)=minloc(point(1)-x_tab,mask=point(1)-x_tab >= 0.d0,dim=1)
-        end if
+            n_cur(1) = minloc(point(1)-x_tab,mask=point(1)-x_tab >= 0.d0,dim=1)
+            ! n_cur(1) = findloc(point(1)-x_tab >= 0._dp, .TRUE., dim=1)
+        endif
 
         if(reload .or. point(2) < y_tab(n_cur(2)) .or. point(2) > y_tab(n_cur(2)+1))then
             reload=.true.
-            n_cur(2)=minloc(point(2)-y_tab,mask=point(2)-y_tab >= 0.d0,dim=1)
-        end if
+            n_cur(2) = minloc(point(2)-y_tab,mask=point(2)-y_tab >= 0.d0,dim=1)
+        endif
 
         if(reload)then
             V_2d(:,1) = x_tab(n_cur(1)-1:n_cur(1)+2)
             V_2d(:,2) = y_tab(n_cur(2)-1:n_cur(2)+2)
             f_2d = funcTab( n_cur(1)-1:n_cur(1)+2, n_cur(2)-1:n_cur(2)+2 )
-        end if
+        endif
 
         call ryab_2d(V_2d, f_2d, point,res)
 
@@ -159,12 +176,13 @@ module rspline2d
         implicit none
         real(dp), dimension(-1:2,p_dim_2d), intent(in) :: V_2d
         real(dp), dimension(-1:2,-1:2), intent(in) :: f_2d
-
         real(8), dimension(:), intent(in):: Y
         real(8), intent(out) :: res
+
         real(dp) :: Q(0:3,size(Y))
         real(dp) :: T(size(Y))
-        INTEGER I,J,K,VIN(size(Y)),VBASE(size(Y))
+        integer, dimension(size(Y)) :: VIN, VBASE
+        integer :: I, J
         !---------------------------------
         Q(0,:) = 1.d0
 
@@ -183,30 +201,29 @@ module rspline2d
             do j=0,3
                 VIN(2)=J
                 res = res+Q(I,1)*Q(J,2)*delta2(V_2d, f_2d, VIN,VBASE)
-            end do
-        end do        
+            enddo
+        enddo        
     end subroutine ryab_2d
     !=======================================================
     !*******************************************************
 
-    pure recursive function delta2(V_2d, f_2d, VIN,VBASE) RESULT(res)
+    pure recursive function delta2(V_2d, f_2d, VIN,VBASE) result(res)
         ! To calculate 2d Delta_X^I*Delta_Y^J*Delta_Z^K F_{M,N,P}
         ! VIN=(/I,J,K/), VBASE=(/M,N,P/)
-        IMPLICIT NONE
+        implicit none
         real(dp), dimension(-1:2,p_dim_2d), intent(in) :: V_2d
         real(dp), dimension(-1:2,-1:2), intent(in) :: f_2d
-        INTEGER, dimension(p_dim_2d), intent(in) :: VIN, VBASE
+        integer, dimension(p_dim_2d), intent(in) :: VIN, VBASE
 
         real(dp) :: res
-        INTEGER K
-        INTEGER V1(p_dim_2d),V2(p_dim_2d)
-        !--------------------------------------
+        integer :: K
+        integer, dimension(p_dim_2d) ::  V1, V2
 
-        K = MAXLOC(VIN,DIM=1)
-        if(VIN(k) == 0)then
+        K = maxloc(VIN,DIM=1)
+        if(VIN(k) == 0) then
             res = f_2d(VBASE(1),VBASE(2))
             return
-        end if
+        endif
 
         V1 = VIN
         V1(K) = V1(K)-1

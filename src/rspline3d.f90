@@ -33,7 +33,7 @@ module rspline3d
     subroutine spline3d_init(this, x_tab, y_tab, z_tab, funcTab) 
         class(spline3d_type), intent(inout)  :: this
         real(8), dimension(:), intent(in) :: x_tab, y_tab, z_tab
-        real(8), dimension(:,:,:) :: funcTab
+        real(8), dimension(:,:,:), intent(in) :: funcTab
         character(len=*), parameter ::  subrtn_name = 'spline3d_init', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
@@ -43,6 +43,7 @@ module rspline3d
         this%n_x = size(x_tab)
         this%n_y = size(y_tab)
         this%n_z = size(z_tab)
+        this%n_cur = 1
 
         call alloc1d('x_tab',  this%n_x, this%x_tab, path=fullPathSubrtn)
         this%x_tab = x_tab
@@ -50,6 +51,21 @@ module rspline3d
         this%y_tab = y_tab
         call alloc1d('z_tab',  this%n_z, this%z_tab, path=fullPathSubrtn)
         this%z_tab = z_tab
+        
+        if (size(funcTab,1) /= this%n_x) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(funcTab,1)= ', size(funcTab,1);
+            error stop 666;
+        endif
+
+        if (size(funcTab,2) /= this%n_y) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(funcTab,2)= ', size(funcTab,2);
+            error stop 666;
+        endif
+        
+        if (size(funcTab,3) /= this%n_z) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(z_tab)=', this%n_z,' is not equal  size(funcTab,3)= ', size(funcTab,3);
+            error stop 666;
+        endif
 
         allocate(this%funcTab(this%n_x,this%n_y,this%n_z), STAT=ierr);
         if (ierr /= 0) then
@@ -79,25 +95,28 @@ module rspline3d
         class(spline3d_type), intent(inout)  :: this
         real(8), intent(in) :: point(p_dim_3d)
         integer, intent(in) :: ierr
+        character(len=*), parameter ::  subrtn_name = 'spline3d_check_value'
 
         associate(n_x=>this%n_x, n_y=>this%n_y, n_z=>this%n_z)
         associate(x_tab=>this%x_tab, y_tab=>this%y_tab, z_tab=>this%z_tab)
         if(ierr == 10)then
-            print*,'variables are out of range'
+            write(*,'(A,100(1pe12.4))') 'x_tab : ',x_tab
+            print*, subrtn_name//': variables are out of range'
             print*,'X',x_tab(2),point(1),x_tab(n_x-1)
             read*
             stop
         end if
 
         if(ierr == 20)then
-            print*,'variables are out of range'
+            write(*,'(A,100(1pe12.4))') 'y_tab : ',y_tab
+            print*,subrtn_name//': variables are out of range'
             print*,'Y',y_tab(2),point(2),y_tab(n_y-1)
             read*
             stop
         end if
 
         if(ierr == 30)then
-            print*,'variables are out of range'
+            print*,subrtn_name//': variables are out of range'
             print*,'res',z_tab(2),point(3),z_tab(n_z-1)
             read*
             stop
