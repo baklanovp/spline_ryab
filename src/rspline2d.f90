@@ -33,7 +33,7 @@ module rspline2d
     subroutine spline2d_init(this, x_tab, y_tab, funcTab) 
         class(spline2d_type), intent(inout)  :: this
         real(8), dimension(:), intent(in) :: x_tab, y_tab
-        real(8), dimension(:,:) :: funcTab
+        real(8), dimension(:,:), intent(in) :: funcTab
         character(len=*), parameter ::  subrtn_name = 'spline2d_init', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
@@ -87,12 +87,13 @@ module rspline2d
         class(spline2d_type), intent(inout)  :: this
         real(8), intent(in) :: point(p_dim_2d)
         integer, intent(in) :: ierr
+        character(len=*), parameter ::  subrtn_name = 'spline2d_check_value'
 
         associate(n_x=>this%n_x, n_y=>this%n_y)
         associate(x_tab=>this%x_tab, y_tab=>this%y_tab)
         if(ierr == 10)then
             write(*,'(A,100(1pe12.4))') 'x_tab : ',x_tab
-            print*,'variables are out of range'
+            print*,subrtn_name//': variables are out of range'
             print*,'x_tab(2),point(1),x_tab(n_x-2): ',x_tab(2),point(1),x_tab(n_x-2)
             ! read*
             stop
@@ -100,7 +101,7 @@ module rspline2d
 
         if(ierr == 20)then
             write(*,'(A,100(1pe12.4))') 'y_tab : ',y_tab
-            print*,'variables are out of range'
+            print*, subrtn_name//': variables are out of range'
             print*,'y_tab(2),point(2),y_tab(n_y-2): ',y_tab(2),point(2),y_tab(n_y-2)
             ! read*
             stop
@@ -126,12 +127,12 @@ module rspline2d
         associate(n_cur=>this%n_cur, V_2d=>this%V_2d, f_2d=>this%f_2d, funcTab=>this%funcTab)
 
         !------/checking if current position is not out of the table's ranges/------
-        if(point(1) < x_tab(2) .or. point(1) >= x_tab(n_x-2))then
+        if(point(1) < x_tab(2) .or. point(1) >= x_tab(n_x-1))then
             ierr = 10
             return            
         endif
 
-        if(point(2) < y_tab(2) .or. point(2) >= y_tab(n_y-2))then
+        if(point(2) < y_tab(2) .or. point(2) >= y_tab(n_y-1))then
             ierr = 20
             return            
         endif

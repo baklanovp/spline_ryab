@@ -33,7 +33,7 @@ module rspline3d
     subroutine spline3d_init(this, x_tab, y_tab, z_tab, funcTab) 
         class(spline3d_type), intent(inout)  :: this
         real(8), dimension(:), intent(in) :: x_tab, y_tab, z_tab
-        real(8), dimension(:,:,:) :: funcTab
+        real(8), dimension(:,:,:), intent(in) :: funcTab
         character(len=*), parameter ::  subrtn_name = 'spline3d_init', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
@@ -95,25 +95,28 @@ module rspline3d
         class(spline3d_type), intent(inout)  :: this
         real(8), intent(in) :: point(p_dim_3d)
         integer, intent(in) :: ierr
+        character(len=*), parameter ::  subrtn_name = 'spline3d_check_value'
 
         associate(n_x=>this%n_x, n_y=>this%n_y, n_z=>this%n_z)
         associate(x_tab=>this%x_tab, y_tab=>this%y_tab, z_tab=>this%z_tab)
         if(ierr == 10)then
-            print*,'variables are out of range'
+            write(*,'(A,100(1pe12.4))') 'x_tab : ',x_tab
+            print*, subrtn_name//': variables are out of range'
             print*,'X',x_tab(2),point(1),x_tab(n_x-1)
             read*
             stop
         end if
 
         if(ierr == 20)then
-            print*,'variables are out of range'
+            write(*,'(A,100(1pe12.4))') 'y_tab : ',y_tab
+            print*,subrtn_name//': variables are out of range'
             print*,'Y',y_tab(2),point(2),y_tab(n_y-1)
             read*
             stop
         end if
 
         if(ierr == 30)then
-            print*,'variables are out of range'
+            print*,subrtn_name//': variables are out of range'
             print*,'res',z_tab(2),point(3),z_tab(n_z-1)
             read*
             stop
