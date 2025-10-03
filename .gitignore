@@ -45,4 +45,6 @@ dump*
 # debug information files
 *.dwo
 
-text/*.exe
+test/*.exe
+test/*.dat
+test/*.png
