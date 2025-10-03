@@ -8,7 +8,7 @@ module rspline3d
 
     character(len=*), parameter  :: mdl_name = 'rspline3d'
     integer, parameter, public :: p_dim_3d = 3 ! dimension of the tables
-
+    real(dp), parameter :: p_val_max = HUGE ( 0.d0 ) / 2
     type spline3d_type
         integer :: ndim = p_dim_3d   ! dimension of the tables
         real(dp) :: V_3d(-1:2,p_dim_3d)  ! local volume
@@ -19,6 +19,8 @@ module rspline3d
         real(dp), dimension(:), allocatable :: z_tab
         real(dp), dimension(:,:,:), allocatable :: funcTab
         integer :: n_x, n_y, n_z
+        logical :: is_cache = .false.
+        real(dp), dimension(:,:,:,:,:,:), allocatable :: delta3_cached
         contains
             procedure :: init => spline3d_init
             procedure :: value => spline3d_value
@@ -30,15 +32,17 @@ module rspline3d
     contains
 
 
-    subroutine spline3d_init(this, x_tab, y_tab, z_tab, funcTab) 
+    subroutine spline3d_init(this, x_tab, y_tab, z_tab, funcTab, is_cache) 
         class(spline3d_type), intent(inout)  :: this
         real(8), dimension(:), intent(in) :: x_tab, y_tab, z_tab
         real(8), dimension(:,:,:), intent(in) :: funcTab
+        logical, optional, intent(in) :: is_cache
         character(len=*), parameter ::  subrtn_name = 'spline3d_init', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
         integer :: ierr               
         ! TODO add checking
+        if ( present(is_cache )) this%is_cache = is_cache;
 
         this%n_x = size(x_tab)
         this%n_y = size(y_tab)
@@ -75,6 +79,15 @@ module rspline3d
         endif
         this%funcTab = funcTab
 
+        if ( this%is_cache ) then;
+            allocate(this%delta3_cached(0:3,0:3,0:3,this%n_x,this%n_y,this%n_z), STAT=ierr);
+            if (ierr /= 0) then
+                write(*, '(2a, 3i4)') fullPathSubrtn, &
+                ' Not enough memory for delta3_cached where n_x,n_y,n_z =', this%n_x,this%n_y,this%n_z;
+                error stop 666;
+            endif
+            this%delta3_cached = p_val_max         
+        endif   
     end subroutine spline3d_init
 
 
@@ -189,7 +202,11 @@ module rspline3d
             f_3d = funcTab( n_cur(1)-1:n_cur(1)+2, n_cur(2)-1:n_cur(2)+2, n_cur(3)-1:n_cur(3)+2 )
         end if
 
-        call ryab_3d(V_3d, f_3d, point,res)
+        if ( this%is_cache) then
+            call ryab_3d_cache(this, V_3d, f_3d, point,res)
+        else 
+            call ryab_3d(V_3d, f_3d, point,res)
+        endif
 
         endassociate
         endassociate
@@ -198,14 +215,14 @@ module rspline3d
     endfunction spline3d_value
 
 
-    pure subroutine ryab_3d(V_3d, f_3d, Y, RES)
+    subroutine ryab_3d_cache(this, V_3d, f_3d, Y, RES)
+        class(spline3d_type), intent(inout)  :: this
         ! To calculate two-dimensional Ryabenkii spline with P=2,s=1
-        implicit none
         real(dp), dimension(-1:2,p_dim_3d), intent(in) :: V_3d
         real(dp), dimension(-1:2,-1:2,-1:2), intent(in) :: f_3d
 
-        real(8), dimension(:), intent(in):: Y
-        real(8), intent(out) :: res
+        real(dp), dimension(:), intent(in):: Y
+        real(dp), intent(out) :: res
         real(dp) :: Q(0:3,size(Y))
         real(dp) :: T(size(Y))
         INTEGER I,J,K,VIN(size(Y)),VBASE(size(Y))
@@ -227,8 +244,46 @@ module rspline3d
             DO J=0,3
                 VIN(2)=J
                 DO K=0,3
-                VIN(3)=K
-                RES=RES+Q(I,1)*Q(J,2)*Q(K,3)*DELTA3(V_3d, f_3d, VIN,VBASE)
+                    VIN(3)=K
+                    RES = RES + Q(I,1)*Q(J,2)*Q(K,3)*delta3cache(this, V_3d, f_3d, VIN,VBASE)
+                END DO
+            END DO
+        END DO
+    endsubroutine ryab_3d_cache
+
+
+
+    pure subroutine ryab_3d(V_3d, f_3d, Y, RES)
+        ! To calculate two-dimensional Ryabenkii spline with P=2,s=1
+        implicit none
+        real(dp), dimension(-1:2,p_dim_3d), intent(in) :: V_3d
+        real(dp), dimension(-1:2,-1:2,-1:2), intent(in) :: f_3d
+
+        real(dp), dimension(:), intent(in):: Y
+        real(dp), intent(out) :: res
+        real(dp) :: Q(0:3,size(Y))
+        real(dp) :: T(size(Y))
+        INTEGER I,J,K,VIN(size(Y)),VBASE(size(Y))
+        !---------------------------------
+        Q(0,:) = 1.d0
+
+        Q(1,:) = Y-V_3d(-1,:)
+
+        Q(2,:) = 0.5d0*(Y-V_3d(-1,:)) * (Y-V_3d(0,:))
+
+        T = (Y-V_3d(0,:)) / (V_3d(1,:)-V_3d(0,:))
+        Q(3,:) = 0.5d0*(V_3d(1,:)-V_3d(0,:))**2 * (V_3d(2,:)-V_3d(-1,:)) * T**3 * (T-1) * (1-2.d0/3.d0*T)
+
+        VBASE = -1
+        RES = 0.D0
+
+        DO I=0,3
+            VIN(1)=I
+            DO J=0,3
+                VIN(2)=J
+                DO K=0,3
+                    VIN(3)=K
+                    RES = RES + Q(I,1)*Q(J,2)*Q(K,3)*delta3(V_3d, f_3d, VIN,VBASE)
                 END DO
             END DO
         END DO
@@ -236,7 +291,24 @@ module rspline3d
     !=======================================================
     !*******************************************************
 
-    pure recursive function delta3(V_3d, f_3d, VIN,VBASE) RESULT(RES)
+    function delta3cache(this,V_3d, f_3d, VIN,VBASE) result(res)
+        ! Cache delta3
+        class(spline3d_type), intent(inout)  :: this
+        real(dp), dimension(-1:2,p_dim_3d), intent(in) :: V_3d
+        real(dp), dimension(-1:2,-1:2,-1:2), intent(in) :: f_3d
+        integer, dimension(p_dim_3d), intent(in) :: VIN, VBASE
+        real(dp) :: res        
+        associate(n_cur=>this%n_cur)
+        res = this%delta3_cached(VIN(1),VIN(2),VIN(3),n_cur(1), n_cur(2), n_cur(3))
+        if ( res >= p_val_max ) then
+            res = delta3(V_3d, f_3d, VIN,VBASE)
+            this%delta3_cached(VIN(1),VIN(2),VIN(3),n_cur(1), n_cur(2), n_cur(3)) = res
+        endif
+        endassociate
+    end function
+
+
+    pure recursive function delta3(V_3d, f_3d, VIN,VBASE) result(res)
         ! To calculate 3D Delta_X^I*Delta_Y^J*Delta_Z^K F_{M,N,P}
         ! VIN=(/I,J,K/), VBASE=(/M,N,P/)
         IMPLICIT NONE
@@ -260,7 +332,7 @@ module rspline3d
         V2 = VBASE
         V2(K) = V2(K)+1
 
-        RES = VIN(K)*(DELTA3(V_3d, f_3d, V1,V2)-DELTA3(V_3d, f_3d, V1,VBASE)) / (V_3d(VBASE(K)+VIN(K),K)-V_3d(VBASE(K),K))
+        RES = VIN(K)*(delta3(V_3d, f_3d, V1,V2)-delta3(V_3d, f_3d, V1,VBASE)) / (V_3d(VBASE(K)+VIN(K),K)-V_3d(VBASE(K),K))
         return
     end function
 

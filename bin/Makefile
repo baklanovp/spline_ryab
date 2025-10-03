@@ -141,7 +141,7 @@ TEMP := $(patsubst %.f90,%.o, $(FILES_lib_ryab))
 OBJ_lib_ryab :=  $(TEMP:.f=.o)
 
 
-FILES_ay3d =  main.f90
+FILES_ay3d = cla.f90 main_value.f90
 OBJ_ay3d :=  $(OBJ_lib_ryab) $(FILES_ay3d:.f90=.o)
 PROG_ay3d = xtest_ay3d.exe 
 
@@ -176,10 +176,13 @@ TARGET=libspline_ryab.a
 all: lib
 # 	@echo $(LIBS)
 
+.PHONY: lib
 lib: $(OBJ_lib_ryab)  ##  Compile and link libspline_ryab.a
 	ar rc -s $(TARGET) $^
 #	ar -s $(TARGET)
-  
+
+.PHONY: test
+tests: ay3d  ##  compile tests
 
 ay3d: $(OBJ_ay3d)  ## compile spline by AV Yudin for 3d
 	$(FC) $(LDFLAGS) $(PROG_ay3d) $(OBJ_ay3d) $(LIBS)
@@ -218,6 +221,7 @@ clean:  ## rm all temporry files
 
 cleandata:  ## rm ../run/strad/nohup.out ../run/strad/core* ../run/strad/fort.*
 	$(DEL) $(RUNDIR)/*.dump
+	$(DEL) $(RUNDIR)/result_3d.dat $(RUNDIR)/result_4d.dat
 
 cleanall:  clean  ## rm all temporry files and executable files
 	$(DEL) $(BINDIR)/$(TARGET)

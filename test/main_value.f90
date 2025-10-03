@@ -1,16 +1,24 @@
 program main
     use kinds,            only: dp
+    use cla, only: cla_init, cla_register, cla_get, cla_help, cla_int, cla_flag, cla_key_present;
+
     implicit none
     
     character(len=*), parameter  :: dir_data = '../data'
+    logical :: is_3d, is_4d;
+    logical :: is_cache;
 
-    ! call test_spline3d;
-    call test_spline4d;
+    call args_init(is_3d, is_4d, is_cache)
+
+    if (is_3d) then
+      call test_spline3d(is_cache);
+    elseif (is_4d) then
+      call test_spline4d;
+    endif
 
 contains
     
-  
-  
+    
   subroutine test_spline4d
     use ryabmod, only: spline4d_type, p_dim_4d
 
@@ -81,8 +89,9 @@ contains
   endsubroutine test_spline4d
 
 
-  subroutine test_spline3d
+  subroutine test_spline3d(is_cache)
     use ryabmod, only: spline3d_type, p_dim_3d
+    logical, intent(in) :: is_cache
 
     type(spline3d_type) :: rspline
     real(dp) s, per(p_dim_3d)
@@ -107,7 +116,7 @@ contains
     ! stop
 
 
-    call rspline%init(TpTab, RhoTab, lnTimeTab, arr_dump)
+    call rspline%init(TpTab, RhoTab, lnTimeTab, arr_dump, is_cache)
 
     c = 0
     s=0.d0
@@ -226,5 +235,30 @@ contains
     ! read*
 
   end subroutine  load_3d
+
+
+  subroutine args_init(is_3d, is_4d, is_cache)
+    use cla, only: cla_init, cla_register, cla_get, cla_help, cla_int, cla_flag, cla_key_present;
+
+    logical, intent(out) :: is_3d, is_4d, is_cache;
+
+    !  Init commang arguments
+    call cla_init();
+    call cla_register('-3d', 'Run 3d test',  cla_flag, 'f');
+    call cla_register('-4d', 'Run 4d test',  cla_flag, 'f');
+    call cla_register('--cache', 'Cached results',  cla_flag, 'f');
+    
+    call cla_register('-h',  'Print this help',  cla_flag, 'f');
+
+    is_3d = cla_key_present('-3d');
+    is_4d = cla_key_present('-4d');
+    is_cache = cla_key_present('--cache');
+
+    if( cla_key_present('-h') ) then;
+        call cla_help();
+        stop;
+    endif;   
+
+  end subroutine args_init
 
 end program main
