@@ -91,33 +91,32 @@ module rspline4d
         associate(x_tab=>this%x_tab, y_tab=>this%y_tab, z_tab=>this%z_tab, w_tab=>this%w_tab)
         if(ierr == 10)then
             write(*,'(A,100(1pe12.4))') 'x_tab : ',x_tab
-            print*, subrtn_name//': X-variables point(1) are out of range'
-            print*,'X',x_tab(2),point(1),x_tab(n_x-1)
+            print*,subrtn_name//': X-variables are out of range'
+            print*,'x_tab(2),point(1),x_tab(n_x-1): ',x_tab(2),point(1),x_tab(n_x-1)
             read*
             stop
         end if
 
         if(ierr == 20)then
             write(*,'(A,100(1pe12.4))') 'y_tab : ',y_tab
-            print*,subrtn_name//': Y-variables point(2) are out of range'
-            print*,'Y',y_tab(2),point(2),y_tab(n_y-1)
+            print*,subrtn_name//': Y-variables are out of range'
+            print*,'y_tab(2),point(2),y_tab(n_y-1): ',y_tab(2),point(2),y_tab(n_y-1)
             read*
             stop
         end if
 
         if(ierr == 30)then
             write(*,'(A,100(1pe12.4))') 'z_tab : ',z_tab
-            write(*,'(A,100(1pe12.4))') 'z_tab : ',z_tab
-            print*, subrtn_name//': Z-variables 3 are out of range'
-            print*,'Z',z_tab(2),point(3),z_tab(n_z-1)
+            print*, subrtn_name//': Z-variables are out of range'
+            print*,'z_tab(2),point(3),z_tab(n_z-1): ',z_tab(2),point(3),z_tab(n_z-1)
             read*
             stop
         end if
 
         if(ierr == 40)then
             write(*,'(A,100(1pe12.4))') 'w_tab : ',w_tab
-            print*,subrtn_name//': W-variables 4 are out of range'
-            print*,'w_tab(2)= ',w_tab(2),' point(4)= ',point(4),' w_tab(n_z-1)= ',w_tab(n_w-1)
+            print*,subrtn_name//': W-variables are out of range'
+            print*,'w_tab(2)= ',w_tab(2),' point(4)= ',point(4),' w_tab(n_w-1)= ',w_tab(n_w-1),' w_tab(n_w)= ',w_tab(n_w)
             read*
             stop
         end if
