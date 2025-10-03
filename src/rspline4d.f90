@@ -34,7 +34,7 @@ module rspline4d
     subroutine spline4d_init(this, x_tab, y_tab, z_tab, w_tab, funcTab) 
         class(spline4d_type), intent(inout)  :: this
         real(8), dimension(:), intent(in) :: x_tab, y_tab, z_tab, w_tab
-        real(8), dimension(:,:,:,:), intent(in) :: funcTab
+        real(8), dimension(:,:,:,:) :: funcTab
         character(len=*), parameter ::  subrtn_name = 'spline4d_init', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
@@ -85,7 +85,8 @@ module rspline4d
         class(spline4d_type), intent(inout)  :: this
         real(8), intent(in) :: point(p_dim_4d)
         integer, intent(in) :: ierr
-        character(len=*), parameter ::  subrtn_name = 'spline4d_check_value'
+        character(len=*), parameter ::  subrtn_name = 'spline4d_check_value', &
+                    fullPathSubrtn = mdl_name//'.'//subrtn_name
 
         associate(n_x=>this%n_x, n_y=>this%n_y, n_z=>this%n_z, n_w=>this%n_w)
         associate(x_tab=>this%x_tab, y_tab=>this%y_tab, z_tab=>this%z_tab, w_tab=>this%w_tab)
