@@ -44,3 +44,5 @@ dump*
 
 # debug information files
 *.dwo
+
+text/*.exe

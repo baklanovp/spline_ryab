@@ -2,6 +2,7 @@ program main
     use kinds,            only: dp
     implicit none
     
+    character(len=*), parameter  :: dir_data = '../data'
 
     ! call test_spline3d;
     call test_spline4d;
@@ -146,7 +147,7 @@ contains
     character(30) fname
     integer :: ierr, ui
 
-    fname = 'data/neM20Ni01Z002.4d.dump'
+    fname = dir_data//'/neM20Ni01Z002.4d.dump'
 
     write(*,"(A,A)") 'Loading from file: ', trim(fname);
 
@@ -194,7 +195,7 @@ contains
     character(30) fname
     integer :: ierr, ui
 
-    fname = 'data/neM20Ni01Z002.3d.dump'
+    fname = dir_data//'/neM20Ni01Z002.3d.dump'
 
     write(*,"(A,A)") 'Loading from file: ', trim(fname);
 

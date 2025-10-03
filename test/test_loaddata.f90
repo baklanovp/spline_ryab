@@ -4,6 +4,8 @@ program test_loaddata
     implicit none
    
     character(len=*), parameter  :: mdl_name = 'test_loaddata'
+    character(len=*), parameter  :: dir_data = '../data'
+
     integer, parameter :: ip = int32
     integer, parameter :: sp = real32
     integer, parameter :: dp = real64
@@ -25,7 +27,7 @@ program test_loaddata
         integer :: ierr, ui
         integer :: it
 
-        fname = 'data/neM20Ni01Z002.dump'
+        fname = dir_data//'/neM20Ni01Z002.dump'
 
         write(*,"(A,A)") 'Loading from file: ', trim(fname);
 
