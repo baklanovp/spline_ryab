@@ -21,6 +21,10 @@ program main_value
       call test_spline4d;
     endif
 
+    if ( .not.(is_3d .or. is_4d)) then
+      call cla_help();
+    endif
+
 contains
     
     
@@ -42,20 +46,21 @@ contains
     write(*,*) '---  RUN test: ', fullPathSubrtn
 
     call load_4d(n_tp, n_rho, n_coord, n_times, TpTab, RhoTab, LcoordTab, lnTimeTab, arr_dump)
-
     
-    open(newunit=ui, file='input_4d.dat', status='unknown', form='formatted', IOSTAT=ierr);
+    open(newunit=ui, file='4d_input.dat', status='unknown', form='formatted', IOSTAT=ierr);
 
+    write(ui,'(A,10A22)') '#', 'TpTab', 'RhoTab', 'arr_dump'
     do i=1,n_tp
       do j=1,n_rho
         write(ui,'(10es23.15)') TpTab(i), RhoTab(j), arr_dump(i,j,6,3)
       end do
     end do
-
     close(ui)
     ! stop
 
-    open(newunit=ui, file='result_4d.dat', status='unknown', form='formatted', IOSTAT=ierr);
+    open(newunit=ui, file='4d_result.dat', status='unknown', form='formatted', IOSTAT=ierr);
+    write(ui,'(A,10A22)') '#', 'Tp+dT', ' Rho+dRho', 'spline'
+
     call rspline%init(TpTab, RhoTab, LcoordTab, lnTimeTab, arr_dump)
 
     c = 0
@@ -107,8 +112,9 @@ contains
     real :: t1, t2
 
     ! integer K
-    integer :: c
+    integer :: c, ui, i, j
     integer :: ierr
+    integer, parameter :: p_c3idx = 3
     real(dp), dimension(:), allocatable :: TpTab, RhoTab, lnTimeTab
     real(dp), dimension(:,:,:), allocatable :: arr_dump
     integer :: n_tp, n_rho, n_times
@@ -117,7 +123,17 @@ contains
 
     call load_3d(n_tp, n_rho, n_times, TpTab, RhoTab, lnTimeTab, arr_dump)
 
-    open(11,file='result_3d.dat')
+    open(newunit=ui, file='3d_input.dat', status='unknown', form='formatted', IOSTAT=ierr);
+    write(ui,'(A,10A22)') '#', 'TpTab', 'RhoTab', 'arr_dump'
+    do i=1,n_tp
+      do j=1,n_rho
+        write(ui,'(10es23.15)') TpTab(i), RhoTab(j), arr_dump(i,j,p_c3idx)
+      end do
+    end do
+    close(ui)
+
+    open(newunit=ui,file='3d_result.dat')
+    write(ui,'(A,10A22)') '#', 'Tp+dT', ' Rho+dRho', 'spline'
 
     ! do K=1,n_tp
     !   write(11,'(10es23.15)') TpTab(K),arr_dump(K,5,3)
@@ -135,11 +151,11 @@ contains
     
     do while(s.le.1.d0)
       c = c+1
-      per(1)=TpTab(2)+s*(TpTab(n_tp-1)-TpTab(2))
-      per(2)=RhoTab(5) !RhoTab(2)+s*(RhoTab(n_rho-1)-RhoTab(2))
-      per(3)=lnTimeTab(3) !lnTimeTab(2)+s*(lnTimeTab(n_times-1)-lnTimeTab(2))
+      per(1) = TpTab(2)+s*(TpTab(n_tp-1)-TpTab(2))
+      per(2) = RhoTab(2)+s*(RhoTab(n_rho-1)-RhoTab(2))
+      per(3) = lnTimeTab(p_c3idx) !lnTimeTab(2)+s*(lnTimeTab(n_times-1)-lnTimeTab(2))
 
-      write(11,'(10es23.15)') per(1), rspline%value(per, ierr) 
+      write(ui,'(10es23.15)') per(1), per(2), rspline%value(per, ierr) 
       if (ierr > 0) then
         call rspline%check_value(per, ierr)
       endif
@@ -148,7 +164,7 @@ contains
       s=s+1.d-4
     end do
 
-    close(11)
+    close(ui)
     call rspline%destroy()
     ! Code segment to be timed
     call cpu_time(t2)
@@ -170,6 +186,7 @@ contains
     real(dp), parameter :: p_wlmax = 50000._dp;! in A
     real(dp), parameter :: p_wlmin = 1._dp;! in A
     real(dp), parameter :: p_c = 2.9979245800e+10_dp
+    integer, parameter :: p_c3idx = 3
 
     ! integer K
     integer :: c
@@ -178,33 +195,39 @@ contains
     real(dp), dimension(:,:,:), allocatable :: arr_dump
     real(dp), dimension(:,:,:,:), allocatable :: funcTab
 
-    integer :: i, n_tp, n_rho, n_times
+    integer :: ui, i, j, n_tp, n_rho, n_times
     real(dp), dimension(p_nfreq) :: fr, res;
     real(dp) :: basis
 
     write(*,*) '---  RUN test: ', fullPathSubrtn, ' is_cache= ',is_cache
 
+
+    ! fr(1) = p_c * 1.d+08 / p_wlmax;
+    ! fr(p_nfreq) = p_c * 1.d+08 / p_wlmin;
+    ! basis = (p_wlmax/p_wlmin)**(1.D0/(DBLE(p_nfreq)));
+    ! !  Geometric PROGRESSION
+    ! do i = 2, p_nfreq
+    !     fr(i) = fr(i-1)*basis;
+    ! enddo
+
     call load_3d(n_tp, n_rho, n_times, TpTab, RhoTab, lnTimeTab, arr_dump)
-
     allocate(funcTab(p_nfreq,n_tp,n_rho,n_times))
-
     ! заглушка
     do i = 1, p_nfreq
       funcTab(i,:,:,:) = arr_dump(:,:,:) 
     enddo
 
-    open(11,file='result_3d_vec.dat')
-    open(21,file='result_3d_vecall.dat')
+    open(newunit=ui, file='3dvec_input.dat', status='unknown', form='formatted', IOSTAT=ierr);
+    write(ui,'(A,10A22)') '#', 'TpTab', 'RhoTab', 'arr_dump'
+    do i=1,n_tp
+      do j=1,n_rho
+        write(ui,'(10es23.15)') TpTab(i), RhoTab(j), funcTab(1,i,j,p_c3idx)
+      end do
+    end do
+    close(ui)
 
-
-    fr(1) = p_c * 1.d+08 / p_wlmax;
-    fr(p_nfreq) = p_c * 1.d+08 / p_wlmin;
-    basis = (p_wlmax/p_wlmin)**(1.D0/(DBLE(p_nfreq)));
-    !  Geometric PROGRESSION
-    do i = 2, p_nfreq
-        fr(i) = fr(i-1)*basis;
-    enddo
-
+    open(newunit=ui,file='3dvec_result.dat')
+    write(ui,'(A,10A22)') '#', 'Tp+dT', ' Rho+dRho', 'spline'
 
     call rspline%init(TpTab, RhoTab, lnTimeTab, funcTab, is_cache)
 
@@ -214,14 +237,14 @@ contains
     
     do while(s.le.1.d0)
       c = c+1
-      per(1)=TpTab(2)+s*(TpTab(n_tp-1)-TpTab(2))
-      per(2)=RhoTab(5) !RhoTab(2)+s*(RhoTab(n_rho-1)-RhoTab(2))
-      per(3)=lnTimeTab(3) !lnTimeTab(2)+s*(lnTimeTab(n_times-1)-lnTimeTab(2))
+      per(1) = TpTab(2) + s*(TpTab(n_tp-1)-TpTab(2))
+      per(2) = RhoTab(2) + s*(RhoTab(n_rho-1)-RhoTab(2))
+      per(3) = lnTimeTab(p_c3idx) !lnTimeTab(2)+s*(lnTimeTab(n_times-1)-lnTimeTab(2))
 
       res = rspline%value(per, ierr)
-      write(11,'(10es23.15)') per(1), res(1)
+      write(ui,'(10es23.15)') per(1),per(2),res(1)
       ! write(11,'(10es23.15)') per(1), per(2), per(3), res(1)
-      write(21,'(100es23.15)') per(1), res
+      ! write(21,'(100es23.15)') per(1), res
       if (ierr > 0) then
         call rspline%check_value(per, ierr)
       endif
@@ -230,8 +253,7 @@ contains
       s=s+1.d-4
     end do
 
-    close(11)
-    close(21)
+    close(ui)
 
     call rspline%destroy()
     ! Code segment to be timed
