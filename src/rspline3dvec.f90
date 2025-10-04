@@ -8,6 +8,7 @@ module rspline3dvec
 
     character(len=*), parameter  :: mdl_name = 'rspline3dvec'
     integer, parameter, public :: p_dim_3d = 3 ! dimension of the tables
+    integer, parameter  :: p_cache_length = 10*1000 ! cache size 
     real(dp), parameter :: p_val_max = HUGE ( 0.d0 ) / 2
     type spline3dvec_type
         integer :: ndim = p_dim_3d   ! dimension of the tables
@@ -21,7 +22,10 @@ module rspline3dvec
         integer :: n_vec
         integer :: n_x, n_y, n_z
         logical :: is_cache = .false.
-        real(dp), dimension(:,:,:,:,:,:,:), allocatable :: delta3_cached
+        integer, dimension(:,:,:,:,:,:), allocatable :: cache_idx
+        integer :: cache_pos
+        integer :: cache_couner_reset
+        real(dp), dimension(:,:), allocatable :: cache_delta3
         contains
             procedure :: init => spline3d_init_vec
             procedure :: value => spline3d_vec
@@ -40,7 +44,8 @@ module rspline3dvec
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
         integer :: ierr               
-        
+
+        this%n_vec = size(funcTab,1)
         call spline3d_init_grid(this, x_tab, y_tab, z_tab, is_cache) 
         
         if (size(funcTab,2) /= this%n_x) then
@@ -56,7 +61,6 @@ module rspline3dvec
             error stop 666;
         endif
 
-        this%n_vec = size(funcTab,1)
         allocate(this%funcTab(this%n_vec,this%n_x,this%n_y,this%n_z), STAT=ierr);
         if (ierr /= 0) then
             write(*, '(2a,i5,a, 4i4)') fullPathSubrtn, &
@@ -100,13 +104,24 @@ module rspline3dvec
         this%z_tab = z_tab
         
         if ( this%is_cache ) then;
-            allocate(this%delta3_cached(this%n_vec,0:3,0:3,0:3,this%n_x,this%n_y,this%n_z), STAT=ierr);
+            allocate(this%cache_delta3(this%n_vec,p_cache_length), STAT=ierr);
             if (ierr /= 0) then
-                write(*, '(2a, 3i4)') fullPathSubrtn, &
-                ' Not enough memory for delta3_cached where this%n_vec,n_x,n_y,n_z =', this%n_vec,this%n_x,this%n_y,this%n_z;
+                write(*, '(2a,i5,i10)') fullPathSubrtn, &
+                ' Not enough memory for cache_delta3 where this%n_vec,p_cache_length =', this%n_vec,p_cache_length;
                 error stop 666;
             endif
-            this%delta3_cached = p_val_max         
+
+            allocate(this%cache_idx(0:3,0:3,0:3,this%n_x,this%n_y,this%n_z), STAT=ierr);
+            if (ierr /= 0) then
+                write(*, '(2a, 3i4)') fullPathSubrtn, &
+                ' Not enough memory for cache_idx where 4*4*4* n_x,n_y,n_z =', this%n_x,this%n_y,this%n_z;
+                error stop 666;
+            endif
+
+            this%cache_pos = 0
+            this%cache_couner_reset = 0
+            this%cache_idx = 0
+            this%cache_delta3 = 0. !p_val_max         
         endif   
     end subroutine spline3d_init_grid
 
@@ -121,6 +136,8 @@ module rspline3dvec
         if (allocated(this%y_tab))      deallocate(this%y_tab)
         if (allocated(this%z_tab))      deallocate(this%z_tab)
         if (allocated(this%funcTab))    deallocate(this%funcTab)
+        if (allocated(this%cache_delta3)) deallocate(this%cache_delta3)
+        if (allocated(this%cache_idx))    deallocate(this%cache_idx)
     end subroutine spline3d_destroy
 
 
@@ -243,12 +260,12 @@ module rspline3dvec
         real(dp), dimension(-1:2,p_dim_3d), intent(in) :: V_3d
         real(dp), dimension(this%n_vec,-1:2,-1:2,-1:2), intent(in) :: f_3d
 
-        real(dp), dimension(:), intent(in):: Y
+        real(dp), dimension(p_dim_3d), intent(in):: Y
         real(dp), dimension(this%n_vec), intent(out) :: res
 
-        real(dp) :: Q(0:3,size(Y))
-        real(dp) :: T(size(Y))
-        INTEGER I,J,K,VIN(size(Y)),VBASE(size(Y))
+        real(dp) :: Q(0:3,p_dim_3d)
+        real(dp) :: T(p_dim_3d)
+        INTEGER I,J,K,VIN(p_dim_3d),VBASE(p_dim_3d)
         !---------------------------------
         Q(0,:) = 1.d0
 
@@ -283,12 +300,13 @@ module rspline3dvec
         real(dp), dimension(-1:2,p_dim_3d), intent(in) :: V_3d
         real(dp), dimension(n_vec,-1:2,-1:2,-1:2), intent(in) :: f_3d
 
-        real(dp), dimension(:), intent(in):: Y
+        real(dp), dimension(p_dim_3d), intent(in):: Y
         real(dp), dimension(n_vec), intent(out) :: res
 
-        real(dp) :: Q(0:3,size(Y))
-        real(dp) :: T(size(Y))
-        INTEGER I,J,K,VIN(size(Y)),VBASE(size(Y))
+        real(dp) :: Q(0:3,p_dim_3d)
+        real(dp), dimension(p_dim_3d) :: T
+        integer, dimension(p_dim_3d) :: VIN, VBASE
+        integer :: i,j,k
         !---------------------------------
         Q(0,:) = 1.d0
 
@@ -323,16 +341,39 @@ module rspline3dvec
         real(dp), dimension(this%n_vec,-1:2,-1:2,-1:2), intent(in) :: f_3d
         integer, dimension(p_dim_3d), intent(in) :: VIN, VBASE
         real(dp), dimension(this%n_vec) :: res
+        integer :: idx
 
-        associate(n_cur=>this%n_cur)
-        res = this%delta3_cached(:,VIN(1),VIN(2),VIN(3),n_cur(1), n_cur(2), n_cur(3))
-        if ( any(res >= p_val_max) ) then
-            res = delta3(this%n_vec, V_3d, f_3d, VIN,VBASE)
-            this%delta3_cached(:,VIN(1),VIN(2),VIN(3),n_cur(1), n_cur(2), n_cur(3)) = res
-        endif
+        associate(n_cur=>this%n_cur, n_vec=>this%n_vec)
+        idx = this%cache_idx(VIN(1),VIN(2),VIN(3),n_cur(1), n_cur(2), n_cur(3))
+        if ( idx > 0 ) then
+            res(1:n_vec) = this%cache_delta3(1:n_vec,idx)
+            ! write(*,*) 'res(:)= ', res(:)
+            ! ! write(*,*) 'this%cache_delta3(:,idx)= ', this%cache_delta3(1,idx)
+            ! write(*,*) 'idx= ',idx, 'this%cache_delta3(1,idx)= ', this%cache_delta3(1,idx)
+            ! stop 
+        else
+            res = delta3(n_vec, V_3d, f_3d, VIN,VBASE)
+            if (this%cache_pos == p_cache_length) then  ! clean cache
+                call cache_reset(this)
+            endif
+            this%cache_pos = this%cache_pos + 1
+            this%cache_idx(VIN(1),VIN(2),VIN(3),n_cur(1), n_cur(2), n_cur(3)) = this%cache_pos
+            this%cache_delta3(1:n_vec,this%cache_pos) = res(1:n_vec)
+            ! write(*,'(5x,1I3,2e12.4)') this%cache_pos, this%cache_delta3(1,this%cache_pos),this%cache_delta3(n_vec,this%cache_pos)
+        endif        
+        ! write(*,'(8I3,2e12.4)') idx, this%cache_pos, VIN(1),VIN(2),VIN(3),n_cur(1), n_cur(2), n_cur(3),res(1), res(n_vec)
         endassociate
-    end function
 
+    end function
+        
+
+    subroutine cache_reset(this)
+        class(spline3dvec_type), intent(inout)  :: this
+        this%cache_pos = 0
+        this%cache_idx = 0
+        this%cache_delta3 = 0. 
+        this%cache_couner_reset = this%cache_couner_reset + 1
+    endsubroutine cache_reset
 
     pure recursive function delta3(n_vec, V_3d, f_3d, VIN,VBASE) result(res)
         ! To calculate 3D Delta_X^I*Delta_Y^J*Delta_Z^K F_{M,N,P}

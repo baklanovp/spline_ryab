@@ -223,9 +223,9 @@ module rspline3d
 
         real(dp), dimension(:), intent(in):: Y
         real(dp), intent(out) :: res
-        real(dp) :: Q(0:3,size(Y))
-        real(dp) :: T(size(Y))
-        INTEGER I,J,K,VIN(size(Y)),VBASE(size(Y))
+        real(dp) :: Q(0:3,p_dim_3d)
+        real(dp) :: T(p_dim_3d)
+        INTEGER I,J,K,VIN(p_dim_3d),VBASE(p_dim_3d)
         !---------------------------------
         Q(0,:) = 1.d0
 
@@ -259,11 +259,11 @@ module rspline3d
         real(dp), dimension(-1:2,p_dim_3d), intent(in) :: V_3d
         real(dp), dimension(-1:2,-1:2,-1:2), intent(in) :: f_3d
 
-        real(dp), dimension(:), intent(in):: Y
+        real(dp), dimension(p_dim_3d), intent(in):: Y
         real(dp), intent(out) :: res
-        real(dp) :: Q(0:3,size(Y))
-        real(dp) :: T(size(Y))
-        INTEGER I,J,K,VIN(size(Y)),VBASE(size(Y))
+        real(dp) :: Q(0:3,p_dim_3d)
+        real(dp) :: T(p_dim_3d)
+        INTEGER I,J,K,VIN(p_dim_3d),VBASE(p_dim_3d)
         !---------------------------------
         Q(0,:) = 1.d0
 

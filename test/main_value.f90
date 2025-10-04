@@ -255,6 +255,9 @@ contains
 
     close(ui)
 
+    write(*,*) 'cache_pos=  ', rspline%cache_pos
+    write(*,*) 'cache_couner_reset=  ', rspline%cache_couner_reset
+
     call rspline%destroy()
     ! Code segment to be timed
     call cpu_time(t2)
