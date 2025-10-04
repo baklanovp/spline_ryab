@@ -8,7 +8,6 @@ module rspline3dvec
 
     character(len=*), parameter  :: mdl_name = 'rspline3dvec'
     integer, parameter, public :: p_dim_3d = 3 ! dimension of the tables
-    integer, parameter  :: p_cache_length = 10*1000 ! cache size 
     real(dp), parameter :: p_val_max = HUGE ( 0.d0 ) / 2
     type spline3dvec_type
         integer :: ndim = p_dim_3d   ! dimension of the tables
@@ -23,6 +22,7 @@ module rspline3dvec
         integer :: n_x, n_y, n_z
         logical :: is_cache = .false.
         integer, dimension(:,:,:,:,:,:), allocatable :: cache_idx
+        integer :: cache_length
         integer :: cache_pos
         integer :: cache_couner_reset
         real(dp), dimension(:,:), allocatable :: cache_delta3
@@ -35,17 +35,25 @@ module rspline3dvec
 
     contains
 
-    subroutine spline3d_init_vec(this, x_tab, y_tab, z_tab, funcTab, is_cache) 
+    subroutine spline3d_init_vec(this, x_tab, y_tab, z_tab, funcTab, cache_length) 
         class(spline3dvec_type), intent(inout)  :: this
         real(8), dimension(:), intent(in) :: x_tab, y_tab, z_tab
         real(8), dimension(:,:,:,:), intent(in) :: funcTab
-        logical, optional, intent(in) :: is_cache
+        integer, optional, intent(in) :: cache_length
         character(len=*), parameter ::  subrtn_name = 'spline3d_init_vec', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
         integer :: ierr               
+        logical :: is_cache
+        
+        is_cache = .false.
+        if (present(cache_length)) then
+            is_cache = cache_length > 0
+        endif
 
         this%n_vec = size(funcTab,1)
+        if (is_cache) this%cache_length = cache_length
+        
         call spline3d_init_grid(this, x_tab, y_tab, z_tab, is_cache) 
         
         if (size(funcTab,2) /= this%n_x) then
@@ -104,10 +112,10 @@ module rspline3dvec
         this%z_tab = z_tab
         
         if ( this%is_cache ) then;
-            allocate(this%cache_delta3(this%n_vec,p_cache_length), STAT=ierr);
+            allocate(this%cache_delta3(this%n_vec,this%cache_length), STAT=ierr);
             if (ierr /= 0) then
                 write(*, '(2a,i5,i10)') fullPathSubrtn, &
-                ' Not enough memory for cache_delta3 where this%n_vec,p_cache_length =', this%n_vec,p_cache_length;
+                ' Not enough memory for cache_delta3 where this%n_vec,cache_length =', this%n_vec,this%cache_length;
                 error stop 666;
             endif
 
@@ -121,7 +129,7 @@ module rspline3dvec
             this%cache_pos = 0
             this%cache_couner_reset = 0
             this%cache_idx = 0
-            this%cache_delta3 = 0. !p_val_max         
+            this%cache_delta3 = 0. !p_val_max      
         endif   
     end subroutine spline3d_init_grid
 
@@ -353,7 +361,7 @@ module rspline3dvec
             ! stop 
         else
             res = delta3(n_vec, V_3d, f_3d, VIN,VBASE)
-            if (this%cache_pos == p_cache_length) then  ! clean cache
+            if (this%cache_pos == this%cache_length) then  ! clean cache
                 call cache_reset(this)
             endif
             this%cache_pos = this%cache_pos + 1

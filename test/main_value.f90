@@ -7,14 +7,20 @@ program main_value
     character(len=*), parameter  :: mdl_name = 'main_value'
 
     character(len=*), parameter  :: dir_data = '../data'
+    integer, parameter  :: p_cache_length = 1000 ! cache size 
+
     logical :: is_3d, is_4d;
     logical :: is_cache;
+    integer :: m_cache_length
 
+    m_cache_length = 0
     call args_init(is_3d, is_4d, is_cache)
 
+    if (is_cache) m_cache_length = p_cache_length
+
     if (is_3d) then
-      call test_spline3d(is_cache);
-      call test_spline3d_vec(is_cache);
+      call test_spline3d(m_cache_length);
+      call test_spline3d_vec(m_cache_length);
     endif
     
     if (is_4d) then
@@ -101,9 +107,9 @@ contains
   endsubroutine test_spline4d
 
 
-  subroutine test_spline3d(is_cache)
+  subroutine test_spline3d(cache_length)
     use ryabmod, only: spline3d_type, p_dim_3d
-    logical, intent(in) :: is_cache
+    integer, intent(in) :: cache_length
 
     character(len=*), parameter ::  subrtn_name = 'test_spline3d', &
                       fullPathSubrtn = mdl_name//'.'//subrtn_name
@@ -119,7 +125,7 @@ contains
     real(dp), dimension(:,:,:), allocatable :: arr_dump
     integer :: n_tp, n_rho, n_times
 
-    write(*,*) '---  RUN test: ', fullPathSubrtn, ' is_cache= ',is_cache
+    write(*,*) '---  RUN test: ', fullPathSubrtn, ' cache_length= ',cache_length
 
     call load_3d(n_tp, n_rho, n_times, TpTab, RhoTab, lnTimeTab, arr_dump)
 
@@ -143,7 +149,7 @@ contains
     ! stop
 
 
-    call rspline%init(TpTab, RhoTab, lnTimeTab, arr_dump, is_cache)
+    call rspline%init(TpTab, RhoTab, lnTimeTab, arr_dump, cache_length>0)
 
     c = 0
     s=0.d0
@@ -174,9 +180,10 @@ contains
   endsubroutine test_spline3d
     
 
-  subroutine test_spline3d_vec(is_cache)
+  subroutine test_spline3d_vec(cache_length)
     use ryabmod, only: spline3dvec_type, p_dim_3d
-    logical, intent(in) :: is_cache
+    integer, intent(in) :: cache_length
+
     character(len=*), parameter ::  subrtn_name = 'test_spline3d_vec', &
                       fullPathSubrtn = mdl_name//'.'//subrtn_name
     type(spline3dvec_type) :: rspline
@@ -199,7 +206,7 @@ contains
     real(dp), dimension(p_nfreq) :: fr, res;
     real(dp) :: basis
 
-    write(*,*) '---  RUN test: ', fullPathSubrtn, ' is_cache= ',is_cache
+    write(*,*) '---  RUN test: ', fullPathSubrtn, ' cache_length= ',cache_length
 
 
     ! fr(1) = p_c * 1.d+08 / p_wlmax;
@@ -229,7 +236,7 @@ contains
     open(newunit=ui,file='3dvec_result.dat')
     write(ui,'(A,10A22)') '#', 'Tp+dT', ' Rho+dRho', 'spline'
 
-    call rspline%init(TpTab, RhoTab, lnTimeTab, funcTab, is_cache)
+    call rspline%init(TpTab, RhoTab, lnTimeTab, funcTab, cache_length)
 
     c = 0
     s=0.d0
@@ -256,6 +263,7 @@ contains
     close(ui)
 
     write(*,*) 'cache_pos=  ', rspline%cache_pos
+    write(*,*) 'cache_length=  ', rspline%cache_length
     write(*,*) 'cache_couner_reset=  ', rspline%cache_couner_reset
 
     call rspline%destroy()
