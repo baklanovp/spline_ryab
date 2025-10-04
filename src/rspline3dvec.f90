@@ -24,7 +24,7 @@ module rspline3dvec
         integer, dimension(:,:,:,:,:,:), allocatable :: cache_idx
         integer :: cache_length
         integer :: cache_pos
-        integer :: cache_couner_reset
+        integer :: cache_counter_reset
         real(dp), dimension(:,:), allocatable :: cache_delta3
         contains
             procedure :: init => spline3d_init_vec
@@ -127,7 +127,7 @@ module rspline3dvec
             endif
 
             this%cache_pos = 0
-            this%cache_couner_reset = 0
+            this%cache_counter_reset = 0
             this%cache_idx = 0
             this%cache_delta3 = 0. !p_val_max      
         endif   
@@ -380,8 +380,9 @@ module rspline3dvec
         this%cache_pos = 0
         this%cache_idx = 0
         this%cache_delta3 = 0. 
-        this%cache_couner_reset = this%cache_couner_reset + 1
+        this%cache_counter_reset = this%cache_counter_reset + 1
     endsubroutine cache_reset
+
 
     pure recursive function delta3(n_vec, V_3d, f_3d, VIN,VBASE) result(res)
         ! To calculate 3D Delta_X^I*Delta_Y^J*Delta_Z^K F_{M,N,P}

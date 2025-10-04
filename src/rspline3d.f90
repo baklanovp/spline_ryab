@@ -101,6 +101,8 @@ module rspline3d
         if (allocated(this%y_tab))      deallocate(this%y_tab)
         if (allocated(this%z_tab))      deallocate(this%z_tab)
         if (allocated(this%funcTab))    deallocate(this%funcTab)
+        if (allocated(this%delta3_cached))    deallocate(this%delta3_cached)
+        
     end subroutine spline3d_destroy
 
 

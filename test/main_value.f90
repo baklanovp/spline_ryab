@@ -9,18 +9,23 @@ program main_value
     character(len=*), parameter  :: dir_data = '../data'
     integer, parameter  :: p_cache_length = 1000 ! cache size 
 
-    logical :: is_3d, is_4d;
+    logical :: is_2d, is_3d, is_4d;
     logical :: is_cache;
-    integer :: m_cache_length
+    integer :: cache_length
 
-    m_cache_length = 0
-    call args_init(is_3d, is_4d, is_cache)
+    cache_length = 0
+    call args_init(is_2d, is_3d, is_4d, is_cache)
 
-    if (is_cache) m_cache_length = p_cache_length
+    if (is_cache) cache_length = p_cache_length
+
+    if (is_2d) then
+      call test_spline2d(cache_length);
+      call test_spline2d_vec(cache_length);
+    endif
 
     if (is_3d) then
-      call test_spline3d(m_cache_length);
-      call test_spline3d_vec(m_cache_length);
+      call test_spline3d(cache_length);
+      call test_spline3d_vec(cache_length);
     endif
     
     if (is_4d) then
@@ -33,41 +38,47 @@ program main_value
 
 contains
     
-    
-  subroutine test_spline4d
-    use ryabmod, only: spline4d_type, p_dim_4d
 
-    character(len=*), parameter ::  subrtn_name = 'test_spline4d', &
+
+  subroutine test_spline2d(cache_length)
+    use ryabmod, only: spline2d_type, p_dim_2d
+    integer, intent(in) :: cache_length
+
+    character(len=*), parameter ::  subrtn_name = 'test_spline2d', &
                       fullPathSubrtn = mdl_name//'.'//subrtn_name
-    type(spline4d_type) :: rspline
-    real(dp) s, per(p_dim_4d)
+    type(spline2d_type) :: rspline
+    real(dp) s, per(p_dim_2d)
     real :: t1, t2
 
-    integer :: i, j, k, c, ui
+    ! integer K
+    integer :: c, ui, i, j
     integer :: ierr
-    real(dp), dimension(:), allocatable :: TpTab, RhoTab, lnTimeTab, LcoordTab
-    real(dp), dimension(:,:,:,:), allocatable :: arr_dump
-    integer :: n_tp, n_rho, n_coord, n_times
+    integer, parameter :: p_c3idx = 3
+    real(dp), dimension(:), allocatable :: TpTab, RhoTab, lnTimeTab
+    real(dp), dimension(:,:,:), allocatable :: arr_dump
+    real(dp), dimension(:,:), allocatable :: funcTab
 
-    write(*,*) '---  RUN test: ', fullPathSubrtn
+    integer :: n_tp, n_rho, n_times
 
-    call load_4d(n_tp, n_rho, n_coord, n_times, TpTab, RhoTab, LcoordTab, lnTimeTab, arr_dump)
-    
-    open(newunit=ui, file='4d_input.dat', status='unknown', form='formatted', IOSTAT=ierr);
+    write(*,*) '---  RUN test: ', fullPathSubrtn, ' cache_length= ',cache_length
 
+    call load_3d(n_tp, n_rho, n_times, TpTab, RhoTab, lnTimeTab, arr_dump)
+    allocate(funcTab(n_tp,n_rho))
+    funcTab(:,:) = arr_dump(:,:,p_c3idx) 
+
+    open(newunit=ui, file='2d_input.dat', status='unknown', form='formatted', IOSTAT=ierr);
     write(ui,'(A,10A22)') '#', 'TpTab', 'RhoTab', 'arr_dump'
     do i=1,n_tp
       do j=1,n_rho
-        write(ui,'(10es23.15)') TpTab(i), RhoTab(j), arr_dump(i,j,6,3)
+        write(ui,'(10es23.15)') TpTab(i), RhoTab(j), arr_dump(i,j,p_c3idx)
       end do
     end do
     close(ui)
-    ! stop
 
-    open(newunit=ui, file='4d_result.dat', status='unknown', form='formatted', IOSTAT=ierr);
+    open(newunit=ui,file='2d_result.dat')
     write(ui,'(A,10A22)') '#', 'Tp+dT', ' Rho+dRho', 'spline'
 
-    call rspline%init(TpTab, RhoTab, LcoordTab, lnTimeTab, arr_dump)
+    call rspline%init(TpTab, RhoTab, funcTab) ! todo cache for 2d, cache_length>0)
 
     c = 0
     s=0.d0
@@ -75,27 +86,16 @@ contains
     
     do while(s.le.1.d0)
       c = c+1
-      ! per(1) = TpTab(5) 
-      per(1) = TpTab(2) + s*(TpTab(n_tp-1)-TpTab(2))
-      per(2) = RhoTab(2) + s*(RhoTab(n_rho-1)-RhoTab(2))
-      ! per(2) = RhoTab(n_rho-1) - s*(RhoTab(n_rho-1)-RhoTab(2))
-      
-      per(3) = LcoordTab(6)
-      per(4) = lnTimeTab(3)
-      write(ui,'(10es23.15)') (per(i),i=1,2), rspline%value(per, ierr)
+      per(1) = TpTab(2)+s*(TpTab(n_tp-1)-TpTab(2))
+      per(2) = RhoTab(2)+s*(RhoTab(n_rho-1)-RhoTab(2))
 
-      ! per(1) = TpTab(2)+s*(TpTab(n_tp-1)-TpTab(2))
-      ! per(2) = RhoTab(2)+s*(RhoTab(n_rho-1)-RhoTab(2))
-      ! per(3) = LcoordTab(2)+s*(LcoordTab(n_coord-1)-LcoordTab(2))
-      ! per(4) = lnTimeTab(2)+s*(lnTimeTab(n_times-1)-lnTimeTab(2))
-      ! write(ui,'(10es23.15)') (per(i),i=1,4), rspline%value(per, ierr) 
-
+      write(ui,'(10es23.15)') per(1), per(2), rspline%value(per, ierr) 
       if (ierr > 0) then
         call rspline%check_value(per, ierr)
       endif
       ! print*,s
       !  read*
-      s=s+1.d-3
+      s=s+1.d-4
     end do
 
     close(ui)
@@ -103,8 +103,93 @@ contains
     ! Code segment to be timed
     call cpu_time(t2)
 
-    write(*,*) 'Time taken for ', c, ' calls of rspline4d: ', t2 - t1, ' seconds.'
-  endsubroutine test_spline4d
+    write(*,*) 'Time taken for ', c, ' calls of rspline2d: ', t2 - t1, ' seconds.'
+
+  endsubroutine test_spline2d
+    
+
+  subroutine test_spline2d_vec(cache_length)
+    use ryabmod, only: spline2dvec_type, p_dim_2d
+    integer, intent(in) :: cache_length
+
+    character(len=*), parameter ::  subrtn_name = 'test_spline2d_vec', &
+                      fullPathSubrtn = mdl_name//'.'//subrtn_name
+    type(spline2dvec_type) :: rspline
+    real(dp) s, per(p_dim_2d)
+    real :: t1, t2
+    integer, parameter :: p_c3idx = 3
+    integer, parameter :: p_nfreq = 11
+
+    ! integer K
+    integer :: c
+    integer :: ierr
+    real(dp), dimension(:), allocatable :: TpTab, RhoTab, lnTimeTab
+    real(dp), dimension(:,:,:), allocatable :: arr_dump
+    real(dp), dimension(:,:,:), allocatable :: funcTab
+
+    integer :: ui, i, j, n_tp, n_rho, n_times
+    real(dp), dimension(p_nfreq) :: res;
+    real(dp) :: basis
+
+    write(*,*) '---  RUN test: ', fullPathSubrtn, ' cache_length= ',cache_length
+
+    call load_3d(n_tp, n_rho, n_times, TpTab, RhoTab, lnTimeTab, arr_dump)
+    allocate(funcTab(p_nfreq,n_tp,n_rho))
+
+    ! заглушка
+    do i = 1, p_nfreq
+      funcTab(i,:,:) = arr_dump(:,:,p_c3idx) 
+    enddo
+
+    open(newunit=ui, file='2dvec_input.dat', status='unknown', form='formatted', IOSTAT=ierr);
+    write(ui,'(A,10A22)') '#', 'TpTab', 'RhoTab', 'arr_dump'
+    do i=1,n_tp
+      do j=1,n_rho
+        write(ui,'(10es23.15)') TpTab(i), RhoTab(j), funcTab(1,i,j)
+      end do
+    end do
+    close(ui)
+
+    open(newunit=ui,file='2dvec_result.dat')
+    write(ui,'(A,10A22)') '#', 'Tp+dT', ' Rho+dRho', 'spline'
+
+    call rspline%init(TpTab, RhoTab, funcTab, cache_length)
+
+    c = 0
+    s=0.d0
+    call cpu_time(t1)
+    
+    do while(s.le.1.d0)
+      c = c+1
+      per(1) = TpTab(2) + s*(TpTab(n_tp-1)-TpTab(2))
+      per(2) = RhoTab(2) + s*(RhoTab(n_rho-1)-RhoTab(2))
+
+      res = rspline%value(per, ierr)
+      write(ui,'(10es23.15)') per(1),per(2),res(1)
+      ! write(11,'(10es23.15)') per(1), per(2), per(3), res(1)
+      ! write(21,'(100es23.15)') per(1), res
+      if (ierr > 0) then
+        call rspline%check_value(per, ierr)
+      endif
+      ! print*,s
+      !  read*
+      s=s+1.d-4
+    end do
+
+    close(ui)
+
+    write(*,*) 'cache_pos=  ', rspline%cache_pos
+    write(*,*) 'cache_length=  ', rspline%cache_length
+    write(*,*) 'cache_counter_reset=  ', rspline%cache_counter_reset
+
+    call rspline%destroy()
+    ! Code segment to be timed
+    call cpu_time(t2)
+
+    write(*,*) 'Time taken for ', c, ' calls of rspline2d: ', t2 - t1, ' seconds.'
+
+    stop
+  endsubroutine test_spline2d_vec
 
 
   subroutine test_spline3d(cache_length)
@@ -264,7 +349,7 @@ contains
 
     write(*,*) 'cache_pos=  ', rspline%cache_pos
     write(*,*) 'cache_length=  ', rspline%cache_length
-    write(*,*) 'cache_couner_reset=  ', rspline%cache_couner_reset
+    write(*,*) 'cache_counter_reset=  ', rspline%cache_counter_reset
 
     call rspline%destroy()
     ! Code segment to be timed
@@ -275,6 +360,80 @@ contains
     stop
   endsubroutine test_spline3d_vec
     
+
+
+  subroutine test_spline4d
+    use ryabmod, only: spline4d_type, p_dim_4d
+
+    character(len=*), parameter ::  subrtn_name = 'test_spline4d', &
+                      fullPathSubrtn = mdl_name//'.'//subrtn_name
+    type(spline4d_type) :: rspline
+    real(dp) s, per(p_dim_4d)
+    real :: t1, t2
+
+    integer :: i, j, k, c, ui
+    integer :: ierr
+    real(dp), dimension(:), allocatable :: TpTab, RhoTab, lnTimeTab, LcoordTab
+    real(dp), dimension(:,:,:,:), allocatable :: arr_dump
+    integer :: n_tp, n_rho, n_coord, n_times
+
+    write(*,*) '---  RUN test: ', fullPathSubrtn
+
+    call load_4d(n_tp, n_rho, n_coord, n_times, TpTab, RhoTab, LcoordTab, lnTimeTab, arr_dump)
+    
+    open(newunit=ui, file='4d_input.dat', status='unknown', form='formatted', IOSTAT=ierr);
+
+    write(ui,'(A,10A22)') '#', 'TpTab', 'RhoTab', 'arr_dump'
+    do i=1,n_tp
+      do j=1,n_rho
+        write(ui,'(10es23.15)') TpTab(i), RhoTab(j), arr_dump(i,j,6,3)
+      end do
+    end do
+    close(ui)
+    ! stop
+
+    open(newunit=ui, file='4d_result.dat', status='unknown', form='formatted', IOSTAT=ierr);
+    write(ui,'(A,10A22)') '#', 'Tp+dT', ' Rho+dRho', 'spline'
+
+    call rspline%init(TpTab, RhoTab, LcoordTab, lnTimeTab, arr_dump)
+
+    c = 0
+    s=0.d0
+    call cpu_time(t1)
+    
+    do while(s.le.1.d0)
+      c = c+1
+      ! per(1) = TpTab(5) 
+      per(1) = TpTab(2) + s*(TpTab(n_tp-1)-TpTab(2))
+      per(2) = RhoTab(2) + s*(RhoTab(n_rho-1)-RhoTab(2))
+      ! per(2) = RhoTab(n_rho-1) - s*(RhoTab(n_rho-1)-RhoTab(2))
+      
+      per(3) = LcoordTab(6)
+      per(4) = lnTimeTab(3)
+      write(ui,'(10es23.15)') (per(i),i=1,2), rspline%value(per, ierr)
+
+      ! per(1) = TpTab(2)+s*(TpTab(n_tp-1)-TpTab(2))
+      ! per(2) = RhoTab(2)+s*(RhoTab(n_rho-1)-RhoTab(2))
+      ! per(3) = LcoordTab(2)+s*(LcoordTab(n_coord-1)-LcoordTab(2))
+      ! per(4) = lnTimeTab(2)+s*(lnTimeTab(n_times-1)-lnTimeTab(2))
+      ! write(ui,'(10es23.15)') (per(i),i=1,4), rspline%value(per, ierr) 
+
+      if (ierr > 0) then
+        call rspline%check_value(per, ierr)
+      endif
+      ! print*,s
+      !  read*
+      s=s+1.d-3
+    end do
+
+    close(ui)
+    call rspline%destroy()
+    ! Code segment to be timed
+    call cpu_time(t2)
+
+    write(*,*) 'Time taken for ', c, ' calls of rspline4d: ', t2 - t1, ' seconds.'
+  endsubroutine test_spline4d
+
 
   subroutine  load_4d(n_tp, n_rho, n_coord, n_times, TpTab, RhoTab, LcoordTab, lnTimeTab, arr_dump)
     real(dp), dimension(:), allocatable, intent(out) :: TpTab, RhoTab, LcoordTab, lnTimeTab
@@ -365,19 +524,21 @@ contains
   end subroutine  load_3d
 
 
-  subroutine args_init(is_3d, is_4d, is_cache)
+  subroutine args_init(is_2d, is_3d, is_4d, is_cache)
     use cla, only: cla_init, cla_register, cla_get, cla_help, cla_int, cla_flag, cla_key_present;
 
-    logical, intent(out) :: is_3d, is_4d, is_cache;
+    logical, intent(out) :: is_2d, is_3d, is_4d, is_cache;
 
     !  Init commang arguments
     call cla_init();
+    call cla_register('-2d', 'Run 2d test',  cla_flag, 'f');
     call cla_register('-3d', 'Run 3d test',  cla_flag, 'f');
     call cla_register('-4d', 'Run 4d test',  cla_flag, 'f');
     call cla_register('--cache', 'Cached results',  cla_flag, 'f');
     
     call cla_register('-h',  'Print this help',  cla_flag, 'f');
 
+    is_2d = cla_key_present('-2d');
     is_3d = cla_key_present('-3d');
     is_4d = cla_key_present('-4d');
     is_cache = cla_key_present('--cache');
