@@ -87,24 +87,25 @@ module rspline2d
         class(spline2d_type), intent(inout)  :: this
         real(8), intent(in) :: point(p_dim_2d)
         integer, intent(in) :: ierr
-        character(len=*), parameter ::  subrtn_name = 'spline2d_check_value'
+        character(len=*), parameter ::  subrtn_name = 'spline2d_check_value', &
+                            fullPathSubrtn = mdl_name//'.'//subrtn_name
 
         associate(n_x=>this%n_x, n_y=>this%n_y)
         associate(x_tab=>this%x_tab, y_tab=>this%y_tab)
         if(ierr == 10)then
             write(*,'(A,100(1pe12.4))') 'x_tab : ',x_tab
-            print*,subrtn_name//': variables are out of range'
+            print*,fullPathSubrtn//': variables are out of range'
             print*,'x_tab(2),point(1),x_tab(n_x-2): ',x_tab(2),point(1),x_tab(n_x-2)
             ! read*
-            stop
+            ! stop 888
         endif
 
         if(ierr == 20)then
             write(*,'(A,100(1pe12.4))') 'y_tab : ',y_tab
-            print*, subrtn_name//': variables are out of range'
+            print*, fullPathSubrtn//': variables are out of range'
             print*,'y_tab(2),point(2),y_tab(n_y-2): ',y_tab(2),point(2),y_tab(n_y-2)
             ! read*
-            stop
+            ! stop 888
         endif
         endassociate
         endassociate
