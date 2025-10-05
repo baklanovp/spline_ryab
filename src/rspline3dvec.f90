@@ -8,6 +8,7 @@ module rspline3dvec
 
     character(len=*), parameter  :: mdl_name = 'rspline3dvec'
     integer, parameter, public :: p_dim_3d = 3 ! dimension of the tables
+
     real(dp), parameter :: p_val_max = HUGE ( 0.d0 ) / 2
     type spline3dvec_type
         integer :: ndim = p_dim_3d   ! dimension of the tables
@@ -35,16 +36,21 @@ module rspline3dvec
 
     contains
 
-    subroutine spline3d_init_vec(this, x_tab, y_tab, z_tab, funcTab, cache_length) 
+    subroutine spline3d_init_vec(this, x_tab, y_tab, z_tab, funcTab, cache_length, is_expand) 
         class(spline3dvec_type), intent(inout)  :: this
-        real(8), dimension(:), intent(in) :: x_tab, y_tab, z_tab
-        real(8), dimension(:,:,:,:), intent(in) :: funcTab
+        real(dp), dimension(:), intent(in) :: x_tab, y_tab, z_tab
+        real(dp), dimension(:,:,:,:), intent(in) :: funcTab
         integer, optional, intent(in) :: cache_length
+        logical, optional, intent(in) :: is_expand
         character(len=*), parameter ::  subrtn_name = 'spline3d_init_vec', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
-
         integer :: ierr               
-        logical :: is_cache
+        logical :: is_cache, is_expand_
+
+        is_expand_ = .false.
+        if ( present(is_expand) ) then
+            is_expand_ = is_expand
+        endif
         
         is_cache = .false.
         if (present(cache_length)) then
@@ -53,29 +59,24 @@ module rspline3dvec
 
         this%n_vec = size(funcTab,1)
         if (is_cache) this%cache_length = cache_length
+
+        call spline3d_init_grid(this, x_tab, y_tab, z_tab, is_cache, is_expand_) 
         
-        call spline3d_init_grid(this, x_tab, y_tab, z_tab, is_cache) 
-        
-        if (size(funcTab,2) /= this%n_x) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(funcTab,2)= ', size(funcTab,2);
+        call func_expand(funcTab, this%funcTab, is_expand_)
+
+        ! Check sizes
+        if (size(this%funcTab,2) /= this%n_x) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(this%funcTab,2)= ', size(this%funcTab,2);
             error stop 666;
         endif
-        if (size(funcTab,3) /= this%n_y) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(funcTab,3)= ', size(funcTab,3);
+        if (size(this%funcTab,3) /= this%n_y) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(this%funcTab,3)= ', size(this%funcTab,3);
             error stop 666;
         endif        
-        if (size(funcTab,4) /= this%n_z) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Size(z_tab)=', this%n_z,' is not equal  size(funcTab,4)= ', size(funcTab,4);
+        if (size(this%funcTab,4) /= this%n_z) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(z_tab)=', this%n_z,' is not equal  size(this%funcTab,4)= ', size(this%funcTab,4);
             error stop 666;
         endif
-
-        allocate(this%funcTab(this%n_vec,this%n_x,this%n_y,this%n_z), STAT=ierr);
-        if (ierr /= 0) then
-            write(*, '(2a,i5,a, 4i4)') fullPathSubrtn, &
-               'ierr= ',ierr, ' Not enough memory for funcTab where n_vec,n_x,n_y,n_z =', this%n_vec,this%n_x,this%n_y,this%n_z;
-            error stop 666;
-        endif
-        this%funcTab = funcTab
 
         allocate(this%f_3d(this%n_vec,-1:2,-1:2,-1:2), STAT=ierr);
         if (ierr /= 0) then
@@ -88,28 +89,132 @@ module rspline3dvec
     end subroutine spline3d_init_vec
 
 
-    subroutine spline3d_init_grid(this, x_tab, y_tab, z_tab, is_cache) 
+    subroutine func_expand(funcTab, funcTabExp, is_expand)
+        ! Expand funcTab by 1 point on each side if is_expand = .true.
+        real(dp), dimension(:,:,:,:), intent(in) :: funcTab
+        logical, intent(in) :: is_expand
+        character(len=*), parameter ::  subrtn_name = 'func_expand', &
+                    fullPathSubrtn = mdl_name//'.'//subrtn_name
+
+        real(dp), dimension(:,:,:,:), allocatable, intent(out) :: funcTabExp
+        integer :: nvec, lx, ly, lz
+        integer :: ierr
+        ! integer :: i, j, k
+
+        nvec = size(funcTab,1)            
+        lx = size(funcTab,2)
+        ly = size(funcTab,3)
+        lz = size(funcTab,4)
+
+        if (allocated(funcTabExp)) deallocate(funcTabExp);
+
+        if (is_expand) then
+            allocate(funcTabExp(nvec, lx+2, ly+2, lz+2), STAT=ierr); ! Add 2 points (one on each side)
+            if (ierr /= 0) then
+                write(*, '(2a,4i10)') fullPathSubrtn, &
+                ' Not enough memory for funcTabExp where nvec, lx, ly, lz =', nvec, lx+2, ly+2, lz+2;
+                error stop 666;
+            endif
+            funcTabExp = -99 ! Initialize to some wrong value to catch errors
+        else
+            allocate(funcTabExp(nvec, lx, ly, lz), STAT=ierr);
+            if (ierr /= 0) then
+                write(*, '(2a,4i10)') fullPathSubrtn, &
+                ' Not enough memory for funcTabExp where nvec, lx, ly, lz =', nvec, lx, ly, lz;
+                error stop 666;
+            endif                    
+            ! Return same as original if no expansion is needed
+            ! write(*, '(2a, 4i4)') fullPathSubrtn, ' No expansion needed for funcTabExp where nvec, lx, ly, lz =', nvec, lx, ly, lz; 
+            funcTabExp(:,:,:,:) = funcTab(:,:,:,:)
+            return
+        endif
+
+        ! Fill the expanded array
+        funcTabExp(:,2:lx+1,2:ly+1,2:lz+1) = funcTab(:,:,:,:)
+
+        !! Points
+        ! XY plane: 1
+        funcTabExp(:,1,1,1) = funcTab(:,1,1,1)
+        funcTabExp(:,lx+2,1,1) = funcTab(:,lx,1,1)
+        funcTabExp(:,1,ly+2,1) = funcTab(:,1,ly,1)
+        funcTabExp(:,lx+2,ly+2,1) = funcTab(:,lx,ly,1)
+        ! XY plane: lz+2
+        funcTabExp(:,1,1,lz+2) = funcTab(:,1,1,lz)
+        funcTabExp(:,lx+2,1,lz+2) = funcTab(:,lx,1,lz)
+        funcTabExp(:,1,ly+2,lz+2) = funcTab(:,1,ly,lz)
+        funcTabExp(:,lx+2,ly+2,lz+2) = funcTab(:,lx,ly,lz)
+
+        !! Faces
+        funcTabExp(:,1,2:ly+1,2:lz+1) = funcTab(:,1,1:ly,1:lz)  ! XY
+        funcTabExp(:,lx+2,2:ly+1,2:lz+1) = funcTab(:,lx,1:ly,1:lz)  ! XY
+        funcTabExp(:,2:lx+1,1,2:lz+1) = funcTab(:,1:lx,1,1:lz)  ! Y
+        funcTabExp(:,2:lx+1,ly+2,2:lz+1) = funcTab(:,1:lx,ly,1:lz)  ! Y
+        funcTabExp(:,2:lx+1,2:ly+1,1) = funcTab(:,1:lx,1:ly,1)  ! Z
+        funcTabExp(:,2:lx+1,2:ly+1,lz+2) = funcTab(:,1:lx,1:ly,lz)  ! Z
+
+        !! Edges
+        ! Z
+        funcTabExp(:,1,1,2:lz+1)       = funcTab(:,1,1,1:lz)  
+        funcTabExp(:,lx+2,1,2:lz+1)    = funcTab(:,lx,1,1:lz) 
+        funcTabExp(:,1,ly+2,2:lz+1)    = funcTab(:,1,ly,1:lz) 
+        funcTabExp(:,lx+2,ly+2,2:lz+1) = funcTab(:,lx,ly,1:lz)
+        ! X
+        funcTabExp(:,2:lx+1,1,1)       = funcTab(:,1:lx,1,1) 
+        funcTabExp(:,2:lx+1,1,lz+2)    = funcTab(:,1:lx,1,lz)
+        funcTabExp(:,2:lx+1,ly+2,1)    = funcTab(:,1:lx,ly,1)
+        funcTabExp(:,2:lx+1,ly+2,lz+2) = funcTab(:,1:lx,ly,lz)
+        ! Y
+        funcTabExp(:,1,2:ly+1,1)       = funcTab(:,1,1:ly,1)
+        funcTabExp(:,1,2:ly+1,lz+2)    = funcTab(:,1,1:ly,lz)
+        funcTabExp(:,lx+2,2:ly+1,1)    = funcTab(:,lx,1:ly,1)
+        funcTabExp(:,lx+2,2:ly+1,lz+2) = funcTab(:,lx,1:ly,lz)    
+        
+        ! write(*, '(2a, 4i4)') fullPathSubrtn, ' Expansion done for funcTabExp where nvec, lx, ly, lz =', nvec, lx+2, ly+2, lz+2;
+    end subroutine func_expand
+
+
+    subroutine x_expand(nm, x, x_exp)
+        character(len=*), intent(in) :: nm
+        real(dp), dimension(:), intent(in) :: x
+        real(dp), dimension(:), allocatable, intent(out) :: x_exp
+        integer :: l
+
+        l = size(x)
+        call alloc1d(nm, l+2, x_exp)
+        x_exp(1) = x(1)
+        x_exp(2:l+1) = x(1:l)
+        x_exp(l+2) = x(l)
+    end subroutine x_expand
+
+
+    subroutine spline3d_init_grid(this, x_tab, y_tab, z_tab, is_cache, is_expand) 
         class(spline3dvec_type), intent(inout)  :: this
-        real(8), dimension(:), intent(in) :: x_tab, y_tab, z_tab
-        logical, optional, intent(in) :: is_cache
+        real(dp), dimension(:), intent(in) :: x_tab, y_tab, z_tab
+        logical, intent(in) :: is_cache, is_expand
         character(len=*), parameter ::  subrtn_name = 'spline3d_init_grid', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
         integer :: ierr               
-        ! TODO add checking
-        if ( present(is_cache )) this%is_cache = is_cache;
 
-        this%n_x = size(x_tab)
-        this%n_y = size(y_tab)
-        this%n_z = size(z_tab)
+        this%is_cache = is_cache;
         this%n_cur = 1
 
-        call alloc1d('x_tab',  this%n_x, this%x_tab, path=fullPathSubrtn)
-        this%x_tab = x_tab
-        call alloc1d('y_tab',  this%n_y, this%y_tab, path=fullPathSubrtn)
-        this%y_tab = y_tab
-        call alloc1d('z_tab',  this%n_z, this%z_tab, path=fullPathSubrtn)
-        this%z_tab = z_tab
+        if (is_expand) then
+            call x_expand('this%x_tab', x_tab, this%x_tab)
+            call x_expand('this%y_tab', y_tab, this%y_tab)
+            call x_expand('this%z_tab', z_tab, this%z_tab)
+        else
+            call alloc1d('x_tab', size(x_tab), this%x_tab, path=fullPathSubrtn)
+            this%x_tab = x_tab
+            call alloc1d('y_tab', size(y_tab), this%y_tab, path=fullPathSubrtn)
+            this%y_tab = y_tab
+            call alloc1d('z_tab', size(z_tab), this%z_tab, path=fullPathSubrtn)
+            this%z_tab = z_tab
+        endif
+
+        this%n_x = size(this%x_tab)
+        this%n_y = size(this%y_tab)
+        this%n_z = size(this%z_tab)
         
         if ( this%is_cache ) then;
             allocate(this%cache_delta3(this%n_vec,this%cache_length), STAT=ierr);
@@ -151,7 +256,7 @@ module rspline3dvec
 
     subroutine spline3d_check_value(this, point, ierr)
         class(spline3dvec_type), intent(inout)  :: this
-        real(8), intent(in) :: point(p_dim_3d)
+        real(dp), intent(in) :: point(p_dim_3d)
         integer, intent(in) :: ierr
         character(len=*), parameter ::  subrtn_name = 'spline3d_check_value'
 
@@ -190,7 +295,7 @@ module rspline3dvec
         ! use ryabmod
         implicit none
         class(spline3dvec_type), intent(inout)  :: this
-        real(8), intent(in) :: point(p_dim_3d)
+        real(dp), intent(in) :: point(p_dim_3d)
         integer, intent(out) :: ierr
         real(dp), dimension(this%n_vec) :: res
 

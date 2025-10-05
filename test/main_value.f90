@@ -10,22 +10,22 @@ program main_value
     integer, parameter  :: p_cache_length = 1000 ! cache size 
 
     logical :: is_2d, is_3d, is_4d;
-    logical :: is_cache;
+    logical :: is_cache, is_expand;
     integer :: cache_length
 
     cache_length = 0
-    call args_init(is_2d, is_3d, is_4d, is_cache)
+    call args_init(is_2d, is_3d, is_4d, is_cache, is_expand)
 
     if (is_cache) cache_length = p_cache_length
 
     if (is_2d) then
       call test_spline2d(cache_length);
-      call test_spline2d_vec(cache_length);
+      call test_spline2d_vec(cache_length, is_expand);
     endif
 
     if (is_3d) then
-      call test_spline3d(cache_length);
-      call test_spline3d_vec(cache_length);
+      ! call test_spline3d(cache_length);
+      call test_spline3d_vec(cache_length, is_expand);
     endif
     
     if (is_4d) then
@@ -108,9 +108,10 @@ contains
   endsubroutine test_spline2d
     
 
-  subroutine test_spline2d_vec(cache_length)
+  subroutine test_spline2d_vec(cache_length, is_expand)
     use ryabmod, only: spline2dvec_type, p_dim_2d
     integer, intent(in) :: cache_length
+    logical, intent(in) :: is_expand
 
     character(len=*), parameter ::  subrtn_name = 'test_spline2d_vec', &
                       fullPathSubrtn = mdl_name//'.'//subrtn_name
@@ -265,9 +266,10 @@ contains
   endsubroutine test_spline3d
     
 
-  subroutine test_spline3d_vec(cache_length)
+  subroutine test_spline3d_vec(cache_length, is_expand)
     use ryabmod, only: spline3dvec_type, p_dim_3d
     integer, intent(in) :: cache_length
+    logical, intent(in) :: is_expand
 
     character(len=*), parameter ::  subrtn_name = 'test_spline3d_vec', &
                       fullPathSubrtn = mdl_name//'.'//subrtn_name
@@ -321,7 +323,7 @@ contains
     open(newunit=ui,file='3dvec_result.dat')
     write(ui,'(A,10A22)') '#', 'Tp+dT', ' Rho+dRho', 'spline'
 
-    call rspline%init(TpTab, RhoTab, lnTimeTab, funcTab, cache_length)
+    call rspline%init(TpTab, RhoTab, lnTimeTab, funcTab, cache_length, is_expand=is_expand)
 
     c = 0
     s=0.d0
@@ -483,13 +485,18 @@ contains
   end subroutine  load_4d
 
 
-  subroutine  load_3d(n_tp, n_rho, n_times, TpTab, RhoTab, lnTimeTab, arr_dump)
+  subroutine  load_3d(n_tp, n_rho, n_times, TpTab, RhoTab, lnTimeTab, arr_dump, is_info)
     real(dp), dimension(:), allocatable, intent(out) :: TpTab, RhoTab, lnTimeTab
     real(dp), dimension(:,:,:), allocatable, intent(out) :: arr_dump
     integer, intent(out) :: n_tp, n_rho, n_times
+    logical, intent(in), optional :: is_info
+    logical :: is_info_
 
     character(30) fname
     integer :: ierr, ui
+
+    is_info_ = .false.
+    if (present(is_info)) is_info_ = is_info 
 
     fname = dir_data//'/neM20Ni01Z002.3d.dump'
 
@@ -509,25 +516,27 @@ contains
 
     close(ui)
 
-    write(*,"(A,A/)") ' Show data ';
+    if ( is_info_) then
+      write(*,"(A,A/)") ' Show data ';
 
 
-    write(*,*) 'TpTab: ', TpTab
-    !		read*
-    write(*,*) 'RhoTab: ', RhoTab
-    !		read*
-    write(*,*) 'lnTimeTab: ', lnTimeTab
-    !		read*
-    write(*,*) 'arr_dump: ', arr_dump
-    ! read*
+      write(*,*) 'TpTab: ', TpTab
+      !		read*
+      write(*,*) 'RhoTab: ', RhoTab
+      !		read*
+      write(*,*) 'lnTimeTab: ', lnTimeTab
+      !		read*
+      write(*,*) 'arr_dump: ', arr_dump
+      ! read*
+    endif
 
   end subroutine  load_3d
 
 
-  subroutine args_init(is_2d, is_3d, is_4d, is_cache)
+  subroutine args_init(is_2d, is_3d, is_4d, is_cache, is_expand)
     use cla, only: cla_init, cla_register, cla_get, cla_help, cla_int, cla_flag, cla_key_present;
 
-    logical, intent(out) :: is_2d, is_3d, is_4d, is_cache;
+    logical, intent(out) :: is_2d, is_3d, is_4d, is_cache, is_expand;
 
     !  Init commang arguments
     call cla_init();
@@ -535,6 +544,7 @@ contains
     call cla_register('-3d', 'Run 3d test',  cla_flag, 'f');
     call cla_register('-4d', 'Run 4d test',  cla_flag, 'f');
     call cla_register('--cache', 'Cached results',  cla_flag, 'f');
+    call cla_register('--expand', 'Expand grid and Func',  cla_flag, 'f');
     
     call cla_register('-h',  'Print this help',  cla_flag, 'f');
 
@@ -542,6 +552,8 @@ contains
     is_3d = cla_key_present('-3d');
     is_4d = cla_key_present('-4d');
     is_cache = cla_key_present('--cache');
+    is_expand = cla_key_present('--expand');
+    
 
     if( cla_key_present('-h') ) then;
         call cla_help();
