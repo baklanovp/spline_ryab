@@ -75,16 +75,6 @@ module rspline2dvec
 
         this%n_cur = 1 !  todo check?
 
-        if (size(funcTab,2) /= this%n_x) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(funcTab,2)= ', size(funcTab,2);
-            error stop 666;
-        endif
-
-        if (size(funcTab,3) /= this%n_y) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(funcTab,3)= ', size(funcTab,3);
-            error stop 666;
-        endif
-
         if (is_expand_) then
             call expand_2dvec(funcTab, this%funcTab)
         else
@@ -106,7 +96,7 @@ module rspline2dvec
             write(*, '(4a, i4)') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(this%funcTab,3)= ', size(this%funcTab,3);
             error stop 666;
         endif
-        
+
 
         allocate(this%f_2d(this%n_vec,-1:2,-1:2), STAT=ierr);
         if (ierr /= 0) then
