@@ -66,14 +66,10 @@ module rspline2dvec
         endif
 
         this%n_vec = size(funcTab,1)
-        call expand_2dvec(funcTab, this%funcTab)
-
         this%first_run = .true.
 
         this%n_x = size(x_tab)
         this%n_y = size(y_tab)
-
-        this%n_cur = 1 !  todo check?
 
         if (is_expand_) then
             call expand_2dvec(funcTab, this%funcTab)
@@ -89,11 +85,11 @@ module rspline2dvec
 
         ! Check sizes
         if (size(this%funcTab,2) /= this%n_x) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(this%funcTab,2)= ', size(this%funcTab,2);
+            write(*, '(2(a, i4))') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(this%funcTab,2)= ', size(this%funcTab,2);
             error stop 666;
         endif
         if (size(this%funcTab,3) /= this%n_y) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(this%funcTab,3)= ', size(this%funcTab,3);
+            write(*, '(2(a, i4))') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(this%funcTab,3)= ', size(this%funcTab,3);
             error stop 666;
         endif
 
@@ -105,6 +101,7 @@ module rspline2dvec
             error stop 666;
         endif
         this%f_2d = 0.
+        this%n_cur = 1 !  todo check?
 
         if ( this%is_cache ) then;            
             call spline2d_init_cache(this, cache_length)

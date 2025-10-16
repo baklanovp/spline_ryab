@@ -76,15 +76,15 @@ module rspline3dvec
 
         ! Check sizes
         if (size(this%funcTab,2) /= this%n_x) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(this%funcTab,2)= ', size(this%funcTab,2);
+            write(*, '(2(a,i4))') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(this%funcTab,2)= ', size(this%funcTab,2);
             error stop 666;
         endif
         if (size(this%funcTab,3) /= this%n_y) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(this%funcTab,3)= ', size(this%funcTab,3);
+            write(*, '(2(a,i4))') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(this%funcTab,3)= ', size(this%funcTab,3);
             error stop 666;
         endif        
         if (size(this%funcTab,4) /= this%n_z) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Size(z_tab)=', this%n_z,' is not equal  size(this%funcTab,4)= ', size(this%funcTab,4);
+            write(*, '(2(a,i4))') fullPathSubrtn, ' Size(z_tab)=', this%n_z,' is not equal  size(this%funcTab,4)= ', size(this%funcTab,4);
             error stop 666;
         endif
 
