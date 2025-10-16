@@ -1,5 +1,6 @@
 module rspline2dvec
     use kinds,   only: dp, alloc1d
+    use array_expand,  only: expand_2dvec, expand_1d
 
     implicit none
     private
@@ -37,36 +38,40 @@ module rspline2dvec
     contains
 
 
-    subroutine spline2d_init(this, x_tab, y_tab, funcTab, cache_length) 
+    subroutine spline2d_init(this, x_tab, y_tab, funcTab, cache_length, is_expand) 
         class(spline2dvec_type), intent(inout)  :: this
         real(8), dimension(:), intent(in) :: x_tab, y_tab
         real(8), dimension(:,:,:), intent(in) :: funcTab
         integer, optional, intent(in) :: cache_length
+        logical, intent(in), optional :: is_expand
         character(len=*), parameter ::  subrtn_name = 'spline2d_init', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
-        integer :: ierr                         
-        logical :: is_cache   
+        integer :: ierr                
+        logical :: is_cache, is_expand_
         
+        is_expand_ = .false.
+        if ( present(is_expand) ) is_expand_ = is_expand
         is_cache = .false.
-        if (present(cache_length)) then
-            is_cache = cache_length > 0
+        if (present(cache_length)) is_cache = cache_length > 0
+
+        if (is_expand_) then
+            call expand_1d('this%x_tab', x_tab, this%x_tab)
+            call expand_1d('this%y_tab', y_tab, this%y_tab)
+        else
+            call alloc1d('x_tab', size(x_tab), this%x_tab, path=fullPathSubrtn)
+            this%x_tab = x_tab
+            call alloc1d('y_tab', size(y_tab), this%y_tab, path=fullPathSubrtn)
+            this%y_tab = y_tab
         endif
-        if (is_cache) then
-            this%is_cache = is_cache;
-            this%cache_length = cache_length
-        endif
+
         this%n_vec = size(funcTab,1)
+        call expand_2dvec(funcTab, this%funcTab)
 
         this%first_run = .true.
 
         this%n_x = size(x_tab)
         this%n_y = size(y_tab)
-
-        call alloc1d('x_tab',  this%n_x, this%x_tab, path=fullPathSubrtn)
-        this%x_tab = x_tab
-        call alloc1d('y_tab',  this%n_y, this%y_tab, path=fullPathSubrtn)
-        this%y_tab = y_tab
 
         this%n_cur = 1 !  todo check?
 
@@ -97,28 +102,39 @@ module rspline2dvec
         this%f_2d = 0.
 
         if ( this%is_cache ) then;            
-            allocate(this%cache_delta2(this%n_vec,this%cache_length), STAT=ierr);
-            if (ierr /= 0) then
-                write(*, '(2a,i5,i10)') fullPathSubrtn, &
-                ' Not enough memory for cache_delta2 where this%n_vec,cache_length =', this%n_vec,this%cache_length;
-                error stop 666;
-            endif
-
-            allocate(this%cache_idx(0:3,0:3,this%n_x,this%n_y), STAT=ierr);
-            if (ierr /= 0) then
-                write(*, '(2a, 3i4)') fullPathSubrtn, &
-                ' Not enough memory for cache_idx where 4*4* n_x,n_y =', this%n_x,this%n_y;
-                error stop 666;
-            endif
-
-            this%cache_pos = 0
-            this%cache_counter_reset = 0
-            this%cache_idx = 0
-            this%cache_delta2 = 0.        
+            call spline2d_init_cache(this, cache_length)
         endif   
 
     end subroutine spline2d_init
 
+    subroutine spline2d_init_cache(this, clength)
+        class(spline2dvec_type), intent(inout)  :: this
+        integer, intent(in) :: clength
+        character(len=*), parameter ::  subrtn_name = 'spline2d_init_cache', &
+                    fullPathSubrtn = mdl_name//'.'//subrtn_name
+        integer :: ierr
+
+        this%cache_length = clength
+        this%is_cache = .true.;
+        allocate(this%cache_delta2(this%n_vec,this%cache_length), STAT=ierr);
+        if (ierr /= 0) then
+            write(*, '(2a,i5,i10)') fullPathSubrtn, &
+            ' Not enough memory for cache_delta2 where this%n_vec,cache_length =', this%n_vec,this%cache_length;
+            error stop 666;
+        endif
+
+        allocate(this%cache_idx(0:3,0:3,this%n_x,this%n_y), STAT=ierr);
+        if (ierr /= 0) then
+            write(*, '(2a, 3i4)') fullPathSubrtn, &
+            ' Not enough memory for cache_idx where 4*4* n_x,n_y =', this%n_x,this%n_y;
+            error stop 666;
+        endif
+
+        this%cache_pos = 0
+        this%cache_counter_reset = 0
+        this%cache_idx = 0
+        this%cache_delta2 = 0.
+    endsubroutine spline2d_init_cache
 
     pure subroutine spline2d_destroy(this)
         implicit none

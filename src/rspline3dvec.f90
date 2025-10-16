@@ -1,5 +1,6 @@
 module rspline3dvec
     use kinds,   only: dp, alloc1d
+    use array_expand,  only: expand_3dvec, expand_1d    
 
     implicit none
     private
@@ -53,16 +54,25 @@ module rspline3dvec
         endif
         
         is_cache = .false.
-        if (present(cache_length)) then
-            is_cache = cache_length > 0
-        endif
+        if (present(cache_length)) is_cache = cache_length > 0
 
-        this%n_vec = size(funcTab,1)
-        if (is_cache) this%cache_length = cache_length
-
-        call spline3d_init_grid(this, x_tab, y_tab, z_tab, is_cache, is_expand_) 
+        this%n_vec = size(funcTab,1)        
         
-        call func_expand(funcTab, this%funcTab, is_expand_)
+        call spline3d_init_grid(this, x_tab, y_tab, z_tab, is_expand_) 
+        
+        if ( is_expand) then
+            call expand_3dvec(funcTab, this%funcTab)
+        else
+            allocate(this%funcTab(this%n_vec, this%n_x, this%n_y, this%n_z), STAT=ierr);
+            if (ierr /= 0) then
+                write(*, '(2a,4i10)') fullPathSubrtn, &
+                ' Not enough memory for funcTabExp where nvec, lx, ly, lz =', this%n_vec, this%n_x, this%n_y, this%n_z;
+                error stop 666;
+            endif                    
+            ! Same as original if no expansion is needed
+            ! write(*, '(2a, 4i4)') fullPathSubrtn, ' No expansion needed for funcTabExp where nvec, lx, ly, lz =', nvec, lx, ly, lz; 
+            this%funcTab(:,:,:,:) = funcTab(:,:,:,:)
+        endif
 
         ! Check sizes
         if (size(this%funcTab,2) /= this%n_x) then
@@ -86,123 +96,25 @@ module rspline3dvec
         endif
         this%f_3d = 0.
 
+        if ( is_cache ) then;
+            call spline3d_init_cache(this, cache_length)
+        endif
+
     end subroutine spline3d_init_vec
 
 
-    subroutine func_expand(funcTab, funcTabExp, is_expand)
-        ! Expand funcTab by 1 point on each side if is_expand = .true.
-        real(dp), dimension(:,:,:,:), intent(in) :: funcTab
-        logical, intent(in) :: is_expand
-        character(len=*), parameter ::  subrtn_name = 'func_expand', &
-                    fullPathSubrtn = mdl_name//'.'//subrtn_name
-
-        real(dp), dimension(:,:,:,:), allocatable, intent(out) :: funcTabExp
-        integer :: nvec, lx, ly, lz
-        integer :: ierr
-        ! integer :: i, j, k
-
-        nvec = size(funcTab,1)            
-        lx = size(funcTab,2)
-        ly = size(funcTab,3)
-        lz = size(funcTab,4)
-
-        if (allocated(funcTabExp)) deallocate(funcTabExp);
-
-        if (is_expand) then
-            allocate(funcTabExp(nvec, lx+2, ly+2, lz+2), STAT=ierr); ! Add 2 points (one on each side)
-            if (ierr /= 0) then
-                write(*, '(2a,4i10)') fullPathSubrtn, &
-                ' Not enough memory for funcTabExp where nvec, lx, ly, lz =', nvec, lx+2, ly+2, lz+2;
-                error stop 666;
-            endif
-            funcTabExp = -99 ! Initialize to some wrong value to catch errors
-        else
-            allocate(funcTabExp(nvec, lx, ly, lz), STAT=ierr);
-            if (ierr /= 0) then
-                write(*, '(2a,4i10)') fullPathSubrtn, &
-                ' Not enough memory for funcTabExp where nvec, lx, ly, lz =', nvec, lx, ly, lz;
-                error stop 666;
-            endif                    
-            ! Return same as original if no expansion is needed
-            ! write(*, '(2a, 4i4)') fullPathSubrtn, ' No expansion needed for funcTabExp where nvec, lx, ly, lz =', nvec, lx, ly, lz; 
-            funcTabExp(:,:,:,:) = funcTab(:,:,:,:)
-            return
-        endif
-
-        ! Fill the expanded array
-        funcTabExp(:,2:lx+1,2:ly+1,2:lz+1) = funcTab(:,:,:,:)
-
-        !! Points
-        ! XY plane: 1
-        funcTabExp(:,1,1,1) = funcTab(:,1,1,1)
-        funcTabExp(:,lx+2,1,1) = funcTab(:,lx,1,1)
-        funcTabExp(:,1,ly+2,1) = funcTab(:,1,ly,1)
-        funcTabExp(:,lx+2,ly+2,1) = funcTab(:,lx,ly,1)
-        ! XY plane: lz+2
-        funcTabExp(:,1,1,lz+2) = funcTab(:,1,1,lz)
-        funcTabExp(:,lx+2,1,lz+2) = funcTab(:,lx,1,lz)
-        funcTabExp(:,1,ly+2,lz+2) = funcTab(:,1,ly,lz)
-        funcTabExp(:,lx+2,ly+2,lz+2) = funcTab(:,lx,ly,lz)
-
-        !! Faces
-        funcTabExp(:,1,2:ly+1,2:lz+1) = funcTab(:,1,1:ly,1:lz)  ! XY
-        funcTabExp(:,lx+2,2:ly+1,2:lz+1) = funcTab(:,lx,1:ly,1:lz)  ! XY
-        funcTabExp(:,2:lx+1,1,2:lz+1) = funcTab(:,1:lx,1,1:lz)  ! Y
-        funcTabExp(:,2:lx+1,ly+2,2:lz+1) = funcTab(:,1:lx,ly,1:lz)  ! Y
-        funcTabExp(:,2:lx+1,2:ly+1,1) = funcTab(:,1:lx,1:ly,1)  ! Z
-        funcTabExp(:,2:lx+1,2:ly+1,lz+2) = funcTab(:,1:lx,1:ly,lz)  ! Z
-
-        !! Edges
-        ! Z
-        funcTabExp(:,1,1,2:lz+1)       = funcTab(:,1,1,1:lz)  
-        funcTabExp(:,lx+2,1,2:lz+1)    = funcTab(:,lx,1,1:lz) 
-        funcTabExp(:,1,ly+2,2:lz+1)    = funcTab(:,1,ly,1:lz) 
-        funcTabExp(:,lx+2,ly+2,2:lz+1) = funcTab(:,lx,ly,1:lz)
-        ! X
-        funcTabExp(:,2:lx+1,1,1)       = funcTab(:,1:lx,1,1) 
-        funcTabExp(:,2:lx+1,1,lz+2)    = funcTab(:,1:lx,1,lz)
-        funcTabExp(:,2:lx+1,ly+2,1)    = funcTab(:,1:lx,ly,1)
-        funcTabExp(:,2:lx+1,ly+2,lz+2) = funcTab(:,1:lx,ly,lz)
-        ! Y
-        funcTabExp(:,1,2:ly+1,1)       = funcTab(:,1,1:ly,1)
-        funcTabExp(:,1,2:ly+1,lz+2)    = funcTab(:,1,1:ly,lz)
-        funcTabExp(:,lx+2,2:ly+1,1)    = funcTab(:,lx,1:ly,1)
-        funcTabExp(:,lx+2,2:ly+1,lz+2) = funcTab(:,lx,1:ly,lz)    
-        
-        ! write(*, '(2a, 4i4)') fullPathSubrtn, ' Expansion done for funcTabExp where nvec, lx, ly, lz =', nvec, lx+2, ly+2, lz+2;
-    end subroutine func_expand
-
-
-    subroutine x_expand(nm, x, x_exp)
-        character(len=*), intent(in) :: nm
-        real(dp), dimension(:), intent(in) :: x
-        real(dp), dimension(:), allocatable, intent(out) :: x_exp
-        integer :: l
-
-        l = size(x)
-        call alloc1d(nm, l+2, x_exp)
-        x_exp(1) = x(1)
-        x_exp(2:l+1) = x(1:l)
-        x_exp(l+2) = x(l)
-    end subroutine x_expand
-
-
-    subroutine spline3d_init_grid(this, x_tab, y_tab, z_tab, is_cache, is_expand) 
+    subroutine spline3d_init_grid(this, x_tab, y_tab, z_tab, is_expand) 
         class(spline3dvec_type), intent(inout)  :: this
         real(dp), dimension(:), intent(in) :: x_tab, y_tab, z_tab
-        logical, intent(in) :: is_cache, is_expand
+        logical, intent(in) :: is_expand
         character(len=*), parameter ::  subrtn_name = 'spline3d_init_grid', &
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
-        integer :: ierr               
-
-        this%is_cache = is_cache;
         this%n_cur = 1
-
         if (is_expand) then
-            call x_expand('this%x_tab', x_tab, this%x_tab)
-            call x_expand('this%y_tab', y_tab, this%y_tab)
-            call x_expand('this%z_tab', z_tab, this%z_tab)
+            call expand_1d('this%x_tab', x_tab, this%x_tab)
+            call expand_1d('this%y_tab', y_tab, this%y_tab)
+            call expand_1d('this%z_tab', z_tab, this%z_tab)
         else
             call alloc1d('x_tab', size(x_tab), this%x_tab, path=fullPathSubrtn)
             this%x_tab = x_tab
@@ -216,27 +128,37 @@ module rspline3dvec
         this%n_y = size(this%y_tab)
         this%n_z = size(this%z_tab)
         
-        if ( this%is_cache ) then;
-            allocate(this%cache_delta3(this%n_vec,this%cache_length), STAT=ierr);
-            if (ierr /= 0) then
-                write(*, '(2a,i5,i10)') fullPathSubrtn, &
-                ' Not enough memory for cache_delta3 where this%n_vec,cache_length =', this%n_vec,this%cache_length;
-                error stop 666;
-            endif
-
-            allocate(this%cache_idx(0:3,0:3,0:3,this%n_x,this%n_y,this%n_z), STAT=ierr);
-            if (ierr /= 0) then
-                write(*, '(2a, 3i4)') fullPathSubrtn, &
-                ' Not enough memory for cache_idx where 4*4*4* n_x,n_y,n_z =', this%n_x,this%n_y,this%n_z;
-                error stop 666;
-            endif
-
-            this%cache_pos = 0
-            this%cache_counter_reset = 0
-            this%cache_idx = 0
-            this%cache_delta3 = 0. !p_val_max      
-        endif   
     end subroutine spline3d_init_grid
+
+
+    subroutine spline3d_init_cache(this, clength)
+        class(spline3dvec_type), intent(inout)  :: this
+        integer, intent(in) :: clength
+        character(len=*), parameter ::  subrtn_name = 'spline3d_init_cache', &
+                    fullPathSubrtn = mdl_name//'.'//subrtn_name
+        integer :: ierr
+
+        this%cache_length = clength
+        this%is_cache = .true.;
+        allocate(this%cache_delta3(this%n_vec,this%cache_length), STAT=ierr);
+        if (ierr /= 0) then
+            write(*, '(2a,i5,i10)') fullPathSubrtn, &
+            ' Not enough memory for cache_delta3 where this%n_vec,cache_length =', this%n_vec,this%cache_length;
+            error stop 666;
+        endif
+
+        allocate(this%cache_idx(0:3,0:3,0:3,this%n_x,this%n_y,this%n_z), STAT=ierr);
+        if (ierr /= 0) then
+            write(*, '(2a, 3i4)') fullPathSubrtn, &
+            ' Not enough memory for cache_idx where 4*4*4* n_x,n_y,n_z =', this%n_x,this%n_y,this%n_z;
+            error stop 666;
+        endif
+
+        this%cache_pos = 0
+        this%cache_counter_reset = 0
+        this%cache_idx = 0
+        this%cache_delta3 = 0. !p_val_max
+    endsubroutine spline3d_init_cache
 
 
     pure subroutine spline3d_destroy(this)
