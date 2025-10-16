@@ -6,7 +6,7 @@ module kinds
 
      private
      public :: sp, dp, qp, isp, idp, ip, i4, i8
-     ! public :: kinds_write_info
+     public :: kinds_write_info
      public :: alloc1d
 
      character(len=*), parameter, private  :: mdl_name = 'kinds'
@@ -61,55 +61,55 @@ module kinds
           endif
      end subroutine dalloc1d
 
-     ! subroutine kinds_write_info (iw)
-     !      integer, intent(in) :: iw
+     subroutine kinds_write_info (iw)
+          integer, intent(in) :: iw
 
-     !      write( iw, '( /, T2, A )' ) 'DATA TYPE INFORMATION:'
+          write( iw, '( /, T2, A )' ) 'DATA TYPE INFORMATION:'
 
-     !      write( iw, '( /,T2,A,T79,A,2(/,T2,A,T75,I6),3(/,T2,A,T67,E15.8) )' ) &
-     !           'REAL: Data type name:', 'default', '      Kind value:', KIND ( 0.d0 ), &
-     !           '      Precision:', PRECISION ( 0.d0 ), &
-     !           '      Smallest non-negligible quantity relative to 1:', &
-     !           EPSILON ( 0.d0 ), &
-     !           '      Smallest positive number:', TINY ( 0.d0 ), &
-     !           '      Largest representable number:', HUGE ( 0.d0 )
-     !      write( iw, '( /,T2,A,T79,A,2(/,T2,A,T75,I6),3(/,T2,A,T67,E15.8) )' ) &
-     !           'REAL: Data type name:', 'dp', '      Kind value:', KIND ( 0.0_dp ), &
-     !           '      Precision:', PRECISION ( 0.0_dp ), &
-     !           '      Smallest non-negligible quantity relative to 1:', &
-     !           EPSILON ( 0.0_dp ), &
-     !           '      Smallest positive number:', TINY ( 0.0_dp ), &
-     !           '      Largest representable number:', HUGE ( 0.0_dp )
-     !      write( iw, '( /,T2,A,T79,A,2(/,T2,A,T75,I6),3(/,T2,A,T67,E15.8) )' ) &
-     !           '      Data type name:', 'sp', '      Kind value:', KIND ( 0.0_sp ), &
-     !           '      Precision:', PRECISION ( 0.0_sp ), &
-     !           '      Smallest non-negligible quantity relative to 1:', &
-     !           EPSILON ( 0.0_sp ), &
-     !           '      Smallest positive number:', TINY ( 0.0_sp ), &
-     !           '      Largest representable number:', HUGE ( 0.0_sp )
-     !      write( iw, '( /,T2,A,T79,A,2(/,T2,A,T75,I6),3(/,T2,A,T67,E32.16E4) )' ) &
-     !           '      Data type name:', 'qp', '      Kind value:', KIND ( 0.0_qp ), &
-     !           '      Precision:', PRECISION ( 0.0_qp ), &
-     !           '      Smallest non-negligible quantity relative to 1:', &
-     !           EPSILON ( 0.0_qp ), &
-     !           '      Smallest positive number:', TINY ( 0.0_qp ), &
-     !           '      Largest representable number:', HUGE ( 0.0_qp )
-     !      write( iw, '( /,T2,A,T72,A,4(/,T2,A,T61,I20) )' ) &
-     !           'integer: Data type name:', '(default)', '         Kind value:', &
-     !           KIND ( 0 ), &
-     !           '         Bit size:', BIT_SIZE ( 0 ), &
-     !           '         Largest representable number:', HUGE ( 0 )
-     !      write( iw, '( /,T2,A,T72,A,4(/,T2,A,T61,I20) )' ) &
-     !           '      Data type name:', 'isp', '      Kind value:', KIND ( 0_isp ), &
-     !           '         Bit size:', BIT_SIZE ( 0_isp ), &
-     !           '      Largest representable number:', HUGE ( 0_isp )
-     !      write( iw, '( /,T2,A,T72,A,/,T2,A,T75,I6,/ )' ) &
-     !           'LOGICAL: Data type name:', '(default)', &
-     !           '         Kind value:', KIND ( .TRUE. )
-     !      write( iw, '( /,T2,A,T72,A,/,T2,A,T75,I6,/ )' ) &
-     !           'CHARACTER: Data type name:', '(default)', &
-     !           '           Kind value:', KIND ( 'C' )
+          write( iw, '( /,T2,A,T79,A,2(/,T2,A,T75,I6),3(/,T2,A,T67,E15.8) )' ) &
+               'REAL: Data type name:', 'default', '      Kind value:', KIND ( 0.d0 ), &
+               '      Precision:', PRECISION ( 0.d0 ), &
+               '      Smallest non-negligible quantity relative to 1:', &
+               EPSILON ( 0.d0 ), &
+               '      Smallest positive number:', TINY ( 0.d0 ), &
+               '      Largest representable number:', HUGE ( 0.d0 )
+          write( iw, '( /,T2,A,T79,A,2(/,T2,A,T75,I6),3(/,T2,A,T67,E15.8) )' ) &
+               'REAL: Data type name:', 'dp', '      Kind value:', KIND ( 0.0_dp ), &
+               '      Precision:', PRECISION ( 0.0_dp ), &
+               '      Smallest non-negligible quantity relative to 1:', &
+               EPSILON ( 0.0_dp ), &
+               '      Smallest positive number:', TINY ( 0.0_dp ), &
+               '      Largest representable number:', HUGE ( 0.0_dp )
+          write( iw, '( /,T2,A,T79,A,2(/,T2,A,T75,I6),3(/,T2,A,T67,E15.8) )' ) &
+               '      Data type name:', 'sp', '      Kind value:', KIND ( 0.0_sp ), &
+               '      Precision:', PRECISION ( 0.0_sp ), &
+               '      Smallest non-negligible quantity relative to 1:', &
+               EPSILON ( 0.0_sp ), &
+               '      Smallest positive number:', TINY ( 0.0_sp ), &
+               '      Largest representable number:', HUGE ( 0.0_sp )
+          write( iw, '( /,T2,A,T79,A,2(/,T2,A,T75,I6),3(/,T2,A,T67,E32.16E4) )' ) &
+               '      Data type name:', 'qp', '      Kind value:', KIND ( 0.0_qp ), &
+               '      Precision:', PRECISION ( 0.0_qp ), &
+               '      Smallest non-negligible quantity relative to 1:', &
+               EPSILON ( 0.0_qp ), &
+               '      Smallest positive number:', TINY ( 0.0_qp ), &
+               '      Largest representable number:', HUGE ( 0.0_qp )
+          write( iw, '( /,T2,A,T72,A,4(/,T2,A,T61,I20) )' ) &
+               'integer: Data type name:', '(default)', '         Kind value:', &
+               KIND ( 0 ), &
+               '         Bit size:', BIT_SIZE ( 0 ), &
+               '         Largest representable number:', HUGE ( 0 )
+          write( iw, '( /,T2,A,T72,A,4(/,T2,A,T61,I20) )' ) &
+               '      Data type name:', 'isp', '      Kind value:', KIND ( 0_isp ), &
+               '         Bit size:', BIT_SIZE ( 0_isp ), &
+               '      Largest representable number:', HUGE ( 0_isp )
+          write( iw, '( /,T2,A,T72,A,/,T2,A,T75,I6,/ )' ) &
+               'LOGICAL: Data type name:', '(default)', &
+               '         Kind value:', KIND ( .TRUE. )
+          write( iw, '( /,T2,A,T72,A,/,T2,A,T75,I6,/ )' ) &
+               'CHARACTER: Data type name:', '(default)', &
+               '           Kind value:', KIND ( 'C' )
 
-     ! end subroutine kinds_write_info
+     end subroutine kinds_write_info
 
 end module kinds
