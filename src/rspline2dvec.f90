@@ -85,13 +85,28 @@ module rspline2dvec
             error stop 666;
         endif
 
-        allocate(this%funcTab(this%n_vec,this%n_x,this%n_y), STAT=ierr);
-        if (ierr /= 0) then
-            write(*, '(2a, 3i4)') fullPathSubrtn, &
-               ' Not enough memory for funcTab where n_vec, n_x,n_y =', this%n_vec,this%n_x,this%n_y;
+        if (is_expand_) then
+            call expand_2dvec(funcTab, this%funcTab)
+        else
+            allocate(this%funcTab(this%n_vec,this%n_x,this%n_y), STAT=ierr);
+            if (ierr /= 0) then
+                write(*, '(2a, 3i4)') fullPathSubrtn, &
+                ' Not enough memory for funcTab where n_vec, n_x,n_y =', this%n_vec,this%n_x,this%n_y;
+                error stop 666;
+            endif
+            this%funcTab = funcTab
+        endif
+
+        ! Check sizes
+        if (size(this%funcTab,2) /= this%n_x) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(this%funcTab,2)= ', size(this%funcTab,2);
             error stop 666;
         endif
-        this%funcTab = funcTab
+        if (size(this%funcTab,3) /= this%n_y) then
+            write(*, '(4a, i4)') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(this%funcTab,3)= ', size(this%funcTab,3);
+            error stop 666;
+        endif
+        
 
         allocate(this%f_2d(this%n_vec,-1:2,-1:2), STAT=ierr);
         if (ierr /= 0) then
