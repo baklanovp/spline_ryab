@@ -68,8 +68,8 @@ module rspline2dvec
         this%n_vec = size(funcTab,1)
         this%first_run = .true.
 
-        this%n_x = size(x_tab)
-        this%n_y = size(y_tab)
+        this%n_x = size(this%x_tab)
+        this%n_y = size(this%x_tab)
 
         if (is_expand_) then
             call expand_2dvec(funcTab, this%funcTab)
