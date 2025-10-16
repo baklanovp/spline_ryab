@@ -6,7 +6,7 @@ module kinds
 
      private
      public :: sp, dp, qp, isp, idp, ip, i4, i8
-     public :: kinds_write_info
+     ! public :: kinds_write_info
      public :: alloc1d
 
      character(len=*), parameter, private  :: mdl_name = 'kinds'
