@@ -133,6 +133,7 @@ contains
         x_exp(1) = x(1)
         x_exp(2:l+1) = x(1:l)
         x_exp(l+2) = x(l)
+        ! write(*, '(3a,2i10)') 'expand_1d: ', nm, ' lx, lx_exp =', l, size(x_exp);
     end subroutine expand_1d
 
 

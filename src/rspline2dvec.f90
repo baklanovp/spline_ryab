@@ -48,13 +48,12 @@ module rspline2dvec
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
 
         integer :: ierr                
-        logical :: is_cache, is_expand_
+        logical :: is_expand_
         
+        this%first_run = .true.
         is_expand_ = .false.
         if ( present(is_expand) ) is_expand_ = is_expand
-        is_cache = .false.
-        if (present(cache_length)) is_cache = cache_length > 0
-
+        
         if (is_expand_) then
             call expand_1d('this%x_tab', x_tab, this%x_tab)
             call expand_1d('this%y_tab', y_tab, this%y_tab)
@@ -66,10 +65,8 @@ module rspline2dvec
         endif
 
         this%n_vec = size(funcTab,1)
-        this%first_run = .true.
-
         this%n_x = size(this%x_tab)
-        this%n_y = size(this%x_tab)
+        this%n_y = size(this%y_tab)
 
         if (is_expand_) then
             call expand_2dvec(funcTab, this%funcTab)
@@ -103,7 +100,7 @@ module rspline2dvec
         this%f_2d = 0.
         this%n_cur = 1 !  todo check?
 
-        if ( this%is_cache ) then;            
+        if (present(cache_length)) then;            
             call spline2d_init_cache(this, cache_length)
         endif   
 
@@ -116,8 +113,8 @@ module rspline2dvec
                     fullPathSubrtn = mdl_name//'.'//subrtn_name
         integer :: ierr
 
+        this%is_cache = clength > 0
         this%cache_length = clength
-        this%is_cache = .true.;
         allocate(this%cache_delta2(this%n_vec,this%cache_length), STAT=ierr);
         if (ierr /= 0) then
             write(*, '(2a,i5,i10)') fullPathSubrtn, &

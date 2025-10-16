@@ -52,12 +52,12 @@ module rspline2d
         this%n_cur = 1 !  todo check?
 
         if (size(funcTab,1) /= this%n_x) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(funcTab,1)= ', size(funcTab,1);
+            write(*, '(a,2(a,i4))') fullPathSubrtn, ' Size(x_tab)=', this%n_x,' is not equal  size(funcTab,1)= ', size(funcTab,1);
             error stop 666;
         endif
 
         if (size(funcTab,2) /= this%n_y) then
-            write(*, '(4a, i4)') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(funcTab,2)= ', size(funcTab,2);
+            write(*, '(a,2(a,i4))') fullPathSubrtn, ' Size(y_tab)=', this%n_y,' is not equal  size(funcTab,2)= ', size(funcTab,2);
             error stop 666;
         endif
 
