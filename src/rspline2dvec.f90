@@ -341,7 +341,7 @@ module rspline2dvec
     end function
 
 
-    subroutine cache_reset(this)
+    pure subroutine cache_reset(this)
         class(spline2dvec_type), intent(inout)  :: this
         this%cache_pos = 0
         this%cache_idx = 0
